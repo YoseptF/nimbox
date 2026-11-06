@@ -105,7 +105,7 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
     return (
       <div className="github-connect">
         <p>
-          Last step: on GitHub, choose <b>Only select repositories</b>, pick your nimbox copy, and click <b>Install</b>.
+          Last step: GitHub asks where to install nimbox-updater. Choose <b>Only select repositories</b>, pick your nimbox copy, and click <b>Install</b>.
         </p>
         <a className="primary button-link" href={github.installUrl} target="_blank" rel="noopener">
           Choose your nimbox copy on GitHub
@@ -119,7 +119,7 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
     return (
       <div className="github-connect">
         <p>
-          Enter this code on GitHub, then click <b>Authorize</b>:
+          Enter this code on GitHub, then click <b>Authorize nimbox-updater</b>:
         </p>
         <div className="device-code">{phase.device.userCode}</div>
         <button className="primary" onClick={() => openGithub(phase.device)}>

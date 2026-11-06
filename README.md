@@ -59,10 +59,10 @@ When a new version is out, nimbox shows a bar at the top of the inbox with what 
 The first time, nimbox asks you to connect GitHub (the setup page offers this too, and you can skip it until you need it):
 
 1. nimbox shows a short code. Click **Copy code and open GitHub**, paste the code, and click **Continue**.
-2. GitHub asks you to **Authorize nimbox**. Click **Authorize**.
-3. GitHub asks where to install nimbox. Choose **Only select repositories**, pick your nimbox copy, and click **Install**.
+2. GitHub asks you to **Authorize nimbox-updater**. Click **Authorize**.
+3. GitHub asks where to install nimbox-updater. Choose **Only select repositories**, pick your nimbox copy, and click **Install**.
 
-nimbox can only read and change the code of that one repository. The connection is stored in your own Worker, never in the browser. It stays active as long as you open nimbox at least once every 6 months; otherwise the Update button walks you through the same three steps again. You can disconnect anytime in **Settings**, or remove the app on GitHub under **Settings → Applications**.
+nimbox can only read and change the code of that one repository. The connection is stored in your own Worker, never in the browser. It stays active as long as you open nimbox at least once every 6 months; otherwise the Update button walks you through the same three steps again. You can disconnect anytime in **Settings**, or remove nimbox-updater on GitHub under **Settings → Applications**.
 
 Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`. Any other edits you made to your copy's code are replaced.
 

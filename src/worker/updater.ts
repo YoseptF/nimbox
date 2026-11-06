@@ -374,7 +374,7 @@ export class Updater extends DurableObject<AppEnv> {
       });
     } catch (error) {
       if (error instanceof GithubError && (error.status === 403 || error.status === 404)) {
-        throw new UpdateError(403, `nimbox is not allowed to change ${repo}. Check that the nimbox GitHub app is installed on it.`);
+        throw new UpdateError(403, `nimbox is not allowed to change ${repo}. Check that the nimbox-updater GitHub app is installed on it.`);
       }
       throw error;
     }
