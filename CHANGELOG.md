@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- New **Connect Cloudflare** step: one approval on Cloudflare's own screen, and nimbox does the Cloudflare parts of setup for you.
+- Receiving is one button: nimbox lists the old mail records it will delete, asks first, turns on Email Routing and sends your address to nimbox.
+- Brevo's records are added to your domain with one button instead of copied by hand.
+- If sign-in protection was skipped while deploying, nimbox's first page turns it on with one click.
+- Settings now manages your addresses (each gets its own routing rule), confirms forwarding addresses through Cloudflare, and sets how often you sign in.
+- Settings → Remove nimbox deletes your mail and everything nimbox created in Cloudflare, in one step.
+
 ## 0.3.2
 
 - The README explains how to remove nimbox completely, including the sign-in protection that Cloudflare keeps after the Worker is deleted.
