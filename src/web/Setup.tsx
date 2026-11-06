@@ -219,13 +219,17 @@ export function Setup(props: {
 
       <Card n={2} done={props.mailboxes.length > 0} title="Your email address">
         {props.mailboxes.length > 0 ? (
-          <p>
-            Your address is <b>{address}</b>
-            {props.mailboxes.length > 1 ? ` (and ${props.mailboxes.length - 1} more)` : ""}.
-          </p>
+          <>
+            <p>
+              Your address is <b>{address}</b>
+              {props.mailboxes.length > 1 ? ` (and ${props.mailboxes.length - 1} more)` : ""}.
+            </p>
+            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
+          </>
         ) : (
           <>
             <p>Which address on your domain do you want to use?</p>
+            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
             <AddMailbox onAdded={props.onMailboxes} label="Use this address" />
           </>
         )}
