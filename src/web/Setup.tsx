@@ -240,7 +240,8 @@ export function Setup(props: {
               </li>
               <li>
                 <OpenLink href={BREVO_KEYS}>Open Brevo's API keys page</OpenLink> and click <b>Generate new API Key</b>. Choose <b>Restricted</b>, set{" "}
-                <b>Transactional email</b> to <b>All</b>, leave the rest on <b>None</b>, and pick the longest expiry.
+                <b>Transactional email</b> to <b>All</b> and <b>Account</b> to <b>Read</b> (so nimbox can see when your domain is ready), leave the rest
+                on <b>None</b>, and pick the longest expiry.
               </li>
               <li>Copy the key and paste it here:</li>
             </ol>
@@ -252,7 +253,7 @@ export function Setup(props: {
             {setup.domains.some((d) => d.state === "badkey") && (
               <div className="banner error">
                 Brevo did not accept the saved key. Create a new key on <OpenLink href={BREVO_KEYS}>Brevo's API keys page</OpenLink> (Restricted,
-                Transactional email set to All) and paste it here:
+                Transactional email set to All, Account set to Read) and paste it here:
                 <BrevoKeyForm onSaved={load} />
               </div>
             )}

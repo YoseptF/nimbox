@@ -56,7 +56,7 @@ On [Brevo's API keys page](https://app.brevo.com/settings/keys/api), click **Gen
 - **Key name**: anything, for example `nimbox`.
 - **Expiry**: pick the longest option.
 - **Access**: **Restricted**.
-- **Permissions**: set **Transactional email** to **All** (Read is not enough to send). Leave everything else on **None**.
+- **Permissions**: set **Transactional email** to **All** (Read is not enough to send) and **Account** to **Read**, so nimbox can see when your domain is ready. Leave everything else on **None**.
 
 Brevo turns off a key that goes 90 days without being used. If that happens, nimbox's setup page says the key was not accepted and lets you paste a new one.
 
