@@ -64,6 +64,10 @@ Brevo turns off a key that goes 90 days without being used. If that happens, nim
 
 In the app, open **Settings** and fill in **Also forward incoming mail to**. That address must first be added and verified under **Email Routing → Destination addresses**.
 
+### Change how often you sign in
+
+By default nimbox asks you to sign in again every 24 hours. To change that, open the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Zero Trust → Access controls → Applications**, click **Edit** on the app named after your project (for a project called `inbox`, it is **inbox - Cloudflare Workers**), pick a **Session Duration** (up to one month), and save.
+
 ## Updating
 
 When a new version is out, nimbox shows a bar at the top of the inbox with what changed and an **Update** button. Click it: nimbox puts the new version into your copy on GitHub, Cloudflare rebuilds it, and the page reloads on the new version after a minute or two.
@@ -77,6 +81,18 @@ The first time, nimbox asks you to connect GitHub (the setup page offers this to
 nimbox can only read and change the code of that one repository. The connection is stored in your own Worker, never in the browser. It stays active as long as you open nimbox at least once every 6 months; otherwise the Update button walks you through the same three steps again. You can disconnect anytime in **Settings**, or remove nimbox-updater on GitHub under **Settings → Applications**.
 
 Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`. Any other edits you made to your copy's code are replaced.
+
+## Uninstall
+
+An install creates a few things in Cloudflare, GitHub and Brevo. To remove nimbox completely, delete each of them. Deleting your mail can't be undone, so download anything you want to keep first.
+
+1. **Stop sending mail to nimbox.** Open [Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), pick your domain, open **Routing rules**, and delete the rule (or edit the **Catch-all**) that sends mail to your nimbox Worker. If you still want mail for your domain, point it somewhere else at the same time; otherwise it bounces.
+2. **Delete the Worker.** Open [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages), click your project, open **Settings**, and click **Delete** at the bottom.
+3. **Delete its sign-in protection.** Deleting the Worker leaves this behind. Open the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Zero Trust → Access controls → Applications**, and delete the app named after your project, like **inbox - Cloudflare Workers**.
+4. **Delete your stored mail.** Open [R2](https://dash.cloudflare.com/?to=/:account/r2/overview), click the `nimbox-mail` bucket (or the name you picked), open **Settings**, click **Empty** under **Empty Bucket**, then delete the bucket.
+5. **Delete your copy on GitHub.** Open your copy (the project name you picked), go to **Settings**, and click **Delete this repository** at the bottom.
+6. **Remove the update app from GitHub**, if you turned on one-click updates. On [your installed GitHub Apps](https://github.com/settings/installations), click **Configure** next to **nimbox-updater** and choose **Uninstall**. Then on [your authorized GitHub Apps](https://github.com/settings/apps/authorizations), click **Revoke** next to **nimbox-updater**.
+7. **Delete the Brevo key**, if you don't use it for anything else. On [Brevo's API keys page](https://app.brevo.com/settings/keys/api), delete the key you made for nimbox.
 
 ## How it works
 
