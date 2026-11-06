@@ -20,15 +20,23 @@ Your own email inbox on your own Cloudflare account. It receives mail for your d
 
 ### 2. Deploy
 
-Click **Deploy to Cloudflare** above. Cloudflare copies this repository into your GitHub account, creates the Worker, the storage bucket and the database, and asks for `BREVO_API_KEY`: paste the key from step 1.
+Click **Deploy to Cloudflare** above. Cloudflare copies this repository into your GitHub account and shows a form:
 
-When it finishes you get an address like `https://nimbox.<your-account>.workers.dev`. It shows a setup page until the next step is done.
+- **Git account**: the GitHub account that gets your copy.
+- **Create private Git repository**: tick it, so your copy is private.
+- **Project name**: pick a name. It becomes the name of your copy on GitHub, the Worker's name and part of its address. If your GitHub account already has a repository with that name, pick a different one (the account that owns the original nimbox repository, for example, can't use `nimbox`).
+- **R2 bucket**: leave **Create new** with the name `nimbox-mail`. This is where your mail is stored.
+- **Location hint**: leave as is.
+- **BREVO_API_KEY**: paste the key from step 1.
+- **Build command** and **Deploy command**: leave as they are.
+
+Cloudflare then creates the Worker, the storage bucket and the database. When it finishes you get an address like `https://<project-name>.<your-account>.workers.dev`. It shows a setup page until the next step is done.
 
 ### 3. Lock it to you with Cloudflare Access
 
 nimbox refuses to show any mail until Access is in place.
 
-1. In the Cloudflare dashboard open **Workers & Pages**, select the `nimbox` Worker, open the **Access** tab and choose **Protect this Worker behind Access** with **All traffic**. As the policy, allow only your own email address.
+1. In the Cloudflare dashboard open **Workers & Pages**, select your Worker (the project name you picked), open the **Access** tab and choose **Protect this Worker behind Access** with **All traffic**. As the policy, allow only your own email address.
 2. Open **Zero Trust → Access → Applications**, edit the new application and copy the **Application Audience (AUD) Tag**.
 3. Find your team name under **Zero Trust → Settings** (it looks like `yourteam.cloudflareaccess.com`).
 4. Back in the Worker, open **Settings → Variables and Secrets** and add two secrets:
@@ -40,7 +48,7 @@ Open the app again: Cloudflare asks you to sign in, and then the setup page show
 ### 4. Send your mail to nimbox
 
 1. In the Cloudflare dashboard open your domain, then **Email → Email Routing**, and turn it on if it is off. Cloudflare replaces your domain's MX records with its own, so mail stops going to any previous forwarding service (ImprovMX, for example) from this point on.
-2. Under **Routing rules**, create a rule for an address (or edit the **Catch-all** rule) with the action **Send to a Worker** and pick `nimbox`.
+2. Under **Routing rules**, create a rule for an address (or edit the **Catch-all** rule) with the action **Send to a Worker** and pick your Worker.
 
 Send yourself an email: it shows up in the inbox. Every address routed to the Worker gets its own mailbox in the app.
 
