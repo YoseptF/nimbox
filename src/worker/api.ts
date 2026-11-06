@@ -6,6 +6,7 @@ import { rawKey } from "./email";
 import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
 import { newId } from "./ids";
+import { detectProvider } from "./provider";
 import { buildEml, textToHtml, type OutgoingAttachment } from "./mime";
 import type { Folder, MessageRow, Person } from "./types";
 import type { UpdaterAction, UpdaterResult } from "./updater";
@@ -301,7 +302,7 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
       throw new HttpError(502, plainBrevoError(error));
     }
     await directory.setSetting("sendVerified", "1");
-    return json({ ok: true });
+    return json({ ok: true, to: userEmail, provider: await detectProvider(userEmail) });
   }
   if (path === "/api/setup/done" && method === "POST") {
     await directory.setSetting("setupDone", "1");
