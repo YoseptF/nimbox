@@ -4,6 +4,8 @@ export const VERSION: string = pkg.version;
 export const UPSTREAM_REPO = "YoseptF/nimbox";
 export const GITHUB_CLIENT_ID = "Iv23lixnboFLnB3fDSEB";
 export const GITHUB_APP_SLUG = "nimbox-updater";
+export const CLOUDFLARE_CLIENT_ID = "";
+export const CLOUDFLARE_REDIRECT_URI = "https://yoseptf.github.io/nimbox/cloudflare.html";
 
 export function compareVersions(a: string, b: string) {
   const pa = a.replace(/^v/, "").split(/[.-]/).map((n) => Number.parseInt(n, 10) || 0);
