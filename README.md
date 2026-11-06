@@ -41,7 +41,7 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
 - **Preview command**: leave as is. It only runs for preview builds, which you just turned off.
 - **Protect with Cloudflare Access**: turn it on. It puts a Cloudflare sign-in in front of your Worker; step 3 finishes the setup. Two more settings appear:
   - **Scope**: pick **All traffic**. With the default, **Previews only**, your inbox gets no sign-in page and nimbox refuses to open it.
-  - **Authentication policy**: open **Add policy**, pick the **Emails** type and enter your own email address. Don't use **Email domain** with a public mail service like gmail.com: that lets in every account on it.
+  - **Authentication policy**: open **Add policy** and pick **Cloudflare account**, so only members of your Cloudflare account can get in. Don't use **Email domain** with a public mail service like gmail.com: that lets in every account on it.
   - **Session duration**: leave the default.
 - **Advanced settings**: leave as they are.
 
@@ -52,8 +52,8 @@ Cloudflare then creates the Worker, the storage bucket and the database. When it
 nimbox refuses to show any mail until Access is in place.
 
 1. In the Cloudflare dashboard open **Workers & Pages**, select your Worker (the project name you picked) and open the **Access** tab.
-   - If you turned on **Protect with Cloudflare Access** in step 2, the Worker is already protected. Check that it covers **All traffic** and that its policy lets in only your own email address, and change them if not.
-   - Otherwise choose **Protect this Worker behind Access** with **All traffic**, and add an **Emails** policy with only your own email address.
+   - If you turned on **Protect with Cloudflare Access** in step 2, the Worker is already protected. Check that it covers **All traffic** and uses the **Cloudflare account** policy, and change them if not.
+   - Otherwise choose **Protect this Worker behind Access** with **All traffic**, and as the authentication policy pick **Cloudflare account**.
 2. Open **Zero Trust → Access → Applications**, edit the application that protects your Worker and copy the **Application Audience (AUD) Tag**.
 3. Find your team name under **Zero Trust → Settings** (it looks like `yourteam.cloudflareaccess.com`).
 4. Back in the Worker, open **Settings → Variables and Secrets** and add two secrets:
