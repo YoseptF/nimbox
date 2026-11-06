@@ -21,6 +21,7 @@ export interface SetupState {
   brevo: { connected: boolean; fromDeploy: boolean; sendVerified: boolean };
   domains: SetupDomain[];
   received: boolean;
+  mailRecords: { domain: string; checked: boolean; remove: { type: "MX" | "TXT"; name: string; content: string; priority?: number }[] }[];
 }
 
 export interface GithubState {
