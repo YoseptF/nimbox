@@ -197,6 +197,7 @@ async function send(env: AppEnv, mailbox: string, input: SendRequest) {
   let messageId: string;
   try {
     messageId = await sendWithBrevo(apiKey, mail);
+    await directoryStub(env).setSetting("sendVerified", "1");
   } catch (error) {
     if (error instanceof BrevoError) throw new HttpError(502, plainBrevoError(error));
     throw error;
@@ -252,7 +253,11 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const domains = apiKey ? await Promise.all(domainsOf(addresses).map((d) => brevoDomain(apiKey, d).catch(() => ({ domain: d, state: "unknown" as const, records: [] })))) : [];
     const incoming = await Promise.all(addresses.map((a) => mailboxStub(env, a).hasIncoming()));
     return json({
-      brevo: { connected: Boolean(apiKey), fromDeploy: Boolean(apiKey) && apiKey === env.BREVO_API_KEY?.trim() },
+      brevo: {
+        connected: Boolean(apiKey),
+        fromDeploy: Boolean(apiKey) && apiKey === env.BREVO_API_KEY?.trim(),
+        sendVerified: Boolean(apiKey) && (await directory.getSetting("sendVerified")) === "1",
+      },
       domains,
       received: incoming.some(Boolean),
     });
@@ -261,6 +266,7 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const key = ((await readJson<{ key?: string }>(request)).key ?? "").trim();
     if (key.length < 20 || /\s/.test(key)) throw new HttpError(400, "That doesn't look like a Brevo key. Copy the whole key and paste it again.");
     await directory.setSetting("brevoKey", key);
+    await directory.setSetting("sendVerified", null);
     return json({ ok: true });
   }
   if (path === "/api/setup/check-domain" && method === "POST") {
@@ -282,6 +288,7 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     } catch (error) {
       throw new HttpError(502, plainBrevoError(error));
     }
+    await directory.setSetting("sendVerified", "1");
     return json({ ok: true });
   }
   if (path === "/api/setup/done" && method === "POST") {

@@ -179,7 +179,9 @@ export function Setup(props: {
   const local = address.split("@")[0];
   const domain = address.split("@")[1] ?? "";
   const name = workerName();
-  const sendingReady = Boolean(setup?.brevo.connected && setup.domains.length > 0 && setup.domains.every((d) => d.state === "verified"));
+  const sendingReady = Boolean(
+    setup?.brevo.connected && (setup.brevo.sendVerified || (setup.domains.length > 0 && setup.domains.every((d) => d.state === "verified"))),
+  );
 
   const checkDomain = async (d: string) => {
     setChecking(true);
@@ -196,6 +198,7 @@ export function Setup(props: {
     try {
       await api.testEmail(address);
       setTestResult({ ok: true, text: `Sent to ${address}. If receiving is set up, it shows up in your inbox in a few seconds.` });
+      setSetup((current) => (current ? { ...current, brevo: { ...current.brevo, sendVerified: true } } : current));
       setTimeout(load, 8000);
     } catch (e) {
       setTestResult({ ok: false, text: (e as Error).message });
@@ -295,6 +298,10 @@ export function Setup(props: {
                   </button>
                   <p className="muted small">New records can take a few minutes to show up.</p>
                 </div>
+              ) : setup.brevo.sendVerified ? (
+                <p key={d.domain}>
+                  Sending from <b>{d.domain}</b> works: Brevo accepted your email.
+                </p>
               ) : (
                 <div key={d.domain}>
                   <p>
