@@ -44,7 +44,7 @@ Open that address and sign in. nimbox shows a short checklist and walks you thro
 
 - **Your email address**: type the address you want to use.
 - **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email. If your key can't read domains, nimbox links straight to [your domains in Brevo](https://app.brevo.com/senders/domain/list) instead. The step turns Done once Brevo confirms your domain or a test email goes out.
-- **Receiving**: one routing rule in Cloudflare's Email Routing. nimbox shows the exact address and Worker name to pick. Turning Email Routing on makes Cloudflare take over your domain's incoming mail, so it stops going to any previous forwarding service (ImprovMX, for example).
+- **Receiving**: in Cloudflare's Email Routing, click **Onboard Domain**, choose your domain and click **Done**. Cloudflare then adds the records that bring your mail to it, so mail stops going to any previous forwarding service (ImprovMX, for example). Then open **Routing Rules** and create one rule; nimbox shows the exact **Email pattern** and Worker to pick. If you use several addresses at your domain, turn on the **Catch-all** rule instead, with the same action and Worker: every address gets its own inbox in nimbox.
 - **One-click updates** (optional): connect GitHub so nimbox can update itself. See [Updating](#updating).
 
 If the page says sign-in protection is not on, you skipped **Protect with Cloudflare Access** in step 1; the page shows where to turn it on.
@@ -86,7 +86,7 @@ Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`.
 
 An install creates a few things in Cloudflare, GitHub and Brevo. To remove nimbox completely, delete each of them. Deleting your mail can't be undone, so download anything you want to keep first.
 
-1. **Stop sending mail to nimbox.** Open [Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), pick your domain, open **Routing rules**, and delete the rule (or edit the **Catch-all**) that sends mail to your nimbox Worker. If you still want mail for your domain, point it somewhere else at the same time; otherwise it bounces.
+1. **Stop sending mail to nimbox.** Open [Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), click your domain, open **Routing Rules**, and delete the rule (or turn off the **Catch-all**) that sends mail to your nimbox Worker. If you still want mail for your domain, point it somewhere else at the same time; otherwise it bounces.
 2. **Delete the Worker.** Open [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages), click your project, open **Settings**, and click **Delete** at the bottom.
 3. **Delete its sign-in protection.** Deleting the Worker leaves this behind. Open the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Zero Trust → Access controls → Applications**, and delete the app named after your project, like **inbox - Cloudflare Workers**.
 4. **Delete your stored mail.** Open [R2](https://dash.cloudflare.com/?to=/:account/r2/overview), click the `nimbox-mail` bucket (or the name you picked), open **Settings**, click **Empty** under **Empty Bucket**, then delete the bucket.

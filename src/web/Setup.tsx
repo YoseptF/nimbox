@@ -342,28 +342,27 @@ export function Setup(props: {
             <p>Tell Cloudflare to deliver your mail to nimbox:</p>
             <ol className="howto">
               <li>
-                <OpenLink href={CF_EMAIL_ROUTING}>Open Email Routing in Cloudflare</OpenLink>
-                {domain ? (
-                  <>
-                    {" "}
-                    and pick <b>{domain}</b>
-                  </>
-                ) : null}
-                . If it asks, turn Email Routing on.
+                <OpenLink href={CF_EMAIL_ROUTING}>Open Email Routing in Cloudflare</OpenLink> and click <b>Onboard Domain</b>. If{" "}
+                {domain ? <b>{domain}</b> : "your domain"} is already listed there, click it instead and skip to step 3.
               </li>
               <li>
-                Open <b>Routing rules</b> and click <b>Create routing rule</b>.
+                Choose {domain ? <b>{domain}</b> : "your domain"} and click <b>Done</b>. Cloudflare adds the records that bring your mail to it. From this
+                moment, mail for {domain ? <b>{domain}</b> : "your domain"} no longer goes to any old forwarding service.
               </li>
               <li>
+                Open <b>Routing Rules</b> and click <b>Create routing rule</b>:
                 <div className="fields">
-                  <span>Email address</span> {local ? <Value value={local} /> : <i>your address</i>}
+                  <span>Email pattern</span> {local ? <Value value={local} /> : <i>your address</i>}
                   <span>Action</span> <b>Send to a Worker</b>
                   <span>Worker</span> {name ? <Value value={name} /> : <b>your nimbox app</b>}
                 </div>
                 Then click <b>Save</b>.
               </li>
             </ol>
-            <p className="muted small">Cloudflare stops sending this domain's mail to any old forwarding service once Email Routing is on.</p>
+            <p className="muted small">
+              Use several addresses at {domain ? <b>{domain}</b> : "your domain"}? Instead of one rule per address, turn on the <b>Catch-all</b> rule
+              under <b>Routing Rules</b> with the same action and Worker. Every address then gets its own inbox in nimbox.
+            </p>
             <button onClick={load} disabled={checking}>
               {checking ? "Checking…" : "Check again"}
             </button>
