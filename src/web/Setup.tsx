@@ -64,7 +64,7 @@ export function Setup({
         <Step done={status.access} title="Put Cloudflare Access in front of this app">
           <p>
             In the Cloudflare dashboard open <b>Workers &amp; Pages</b>, select this Worker, open the <b>Access</b> tab and choose{" "}
-            <b>Protect this Worker behind Access</b> with <b>All traffic</b>. Allow only your own email.
+            <b>Protect this Worker behind Access</b> with <b>All traffic</b>. Add an <b>Emails</b> policy with only your own address (never <b>Email domain</b> with a public service like gmail.com).
           </p>
           <p>
             Then copy the <b>Application Audience (AUD) tag</b> (Zero Trust → Access → Applications → Edit) and your team name (Zero Trust →
