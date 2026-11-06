@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "./api";
-import type { Status } from "./types";
+import { GithubConnect, githubReady } from "./GithubConnect";
+import type { GithubState, Status } from "./types";
 
 function Step({ done, title, children }: { done?: boolean; title: string; children: React.ReactNode }) {
   return (
@@ -41,7 +42,19 @@ export function AddMailbox({ onAdded }: { onAdded: () => void }) {
   );
 }
 
-export function Setup({ status, onMailboxAdded }: { status: Status; onMailboxAdded?: () => void }) {
+export function Setup({
+  status,
+  hasMailboxes,
+  github,
+  onMailboxAdded,
+  onGithub,
+}: {
+  status: Status;
+  hasMailboxes?: boolean;
+  github?: GithubState | null;
+  onMailboxAdded?: () => void;
+  onGithub?: (github: GithubState) => void;
+}) {
   const host = location.host;
   return (
     <div className="setup">
@@ -71,17 +84,29 @@ export function Setup({ status, onMailboxAdded }: { status: Status; onMailboxAdd
         <Step done={status.brevo} title="Connect Brevo for sending">
           <p>
             In Brevo, add your domain under <b>Senders, Domains &amp; Dedicated IPs → Domains</b> and add the DNS records it shows (DKIM and DMARC) in
-            Cloudflare DNS. Create an API key under <b>SMTP &amp; API → API Keys</b> and save it in the Worker as the secret <code>BREVO_API_KEY</code>.
+            Cloudflare DNS. Create an API key under <b>SMTP &amp; API → API Keys</b> and save it in the Worker as the secret{" "}
+            <code>BREVO_API_KEY</code>.
           </p>
         </Step>
         {status.authenticated && (
-          <Step title="Route your mail to this Worker">
+          <Step done={hasMailboxes} title="Route your mail to this Worker">
             <p>
-              In the Cloudflare dashboard open your domain, go to <b>Email → Email Routing → Routing rules</b>, and create a rule (or the catch-all) with
-              the action <b>Send to a Worker</b> pointing to this Worker. Mail for that address shows up here as soon as it arrives.
+              In the Cloudflare dashboard open your domain, go to <b>Email → Email Routing → Routing rules</b>, and create a rule (or the catch-all)
+              with the action <b>Send to a Worker</b> pointing to this Worker. Mail for that address shows up here as soon as it arrives.
             </p>
             <p>You can also add an address now to start sending from it:</p>
             {onMailboxAdded && <AddMailbox onAdded={onMailboxAdded} />}
+          </Step>
+        )}
+        {status.authenticated && github?.enabled && onGithub && (
+          <Step done={githubReady(github)} title="Turn on one-click updates">
+            <p>Connect GitHub once so nimbox can install its own updates with one click later.</p>
+            <GithubConnect github={github} onChange={onGithub} />
+            {!github.connected && (
+              <button className="link small skip" onClick={async () => onGithub(await api.skipGithub())}>
+                Skip for now
+              </button>
+            )}
           </Step>
         )}
       </ol>

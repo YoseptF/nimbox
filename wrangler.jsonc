@@ -15,8 +15,12 @@
   "durable_objects": {
     "bindings": [
       { "name": "MAILBOX", "class_name": "Mailbox" },
-      { "name": "DIRECTORY", "class_name": "Directory" }
+      { "name": "DIRECTORY", "class_name": "Directory" },
+      { "name": "UPDATER", "class_name": "Updater" }
     ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Mailbox", "Directory"] }]
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Mailbox", "Directory"] },
+    { "tag": "v2", "new_sqlite_classes": ["Updater"] }
+  ]
 }

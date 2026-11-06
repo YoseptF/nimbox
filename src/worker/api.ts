@@ -3,11 +3,13 @@ import type { Email } from "postal-mime";
 import { accessConfigured, authenticate, devBypass } from "./auth";
 import { BrevoError, sendWithBrevo } from "./brevo";
 import { rawKey } from "./email";
-import { directoryStub, mailboxStub, type AppEnv } from "./env";
+import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
 import { newId } from "./ids";
 import { buildEml, textToHtml, type OutgoingAttachment } from "./mime";
 import type { Folder, MessageRow, Person } from "./types";
+import type { UpdaterAction, UpdaterResult } from "./updater";
+import { VERSION } from "./release";
 
 const ADDRESS = /^[^\s@<>()",;]+@[^\s@<>()",;]+\.[^\s@<>()",;]+$/;
 
@@ -221,6 +223,17 @@ async function send(env: AppEnv, mailbox: string, input: SendRequest) {
   });
 }
 
+const updateRoutes: Record<string, UpdaterAction> = {
+  "GET /api/updates": "updateState",
+  "POST /api/updates/apply": "apply",
+  "GET /api/github": "githubState",
+  "POST /api/github/connect": "startConnect",
+  "POST /api/github/poll": "pollConnect",
+  "POST /api/github/repo": "chooseRepo",
+  "POST /api/github/skip": "skip",
+  "DELETE /api/github": "disconnect",
+};
+
 async function route(request: Request, env: AppEnv, url: URL): Promise<Response> {
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
@@ -232,6 +245,7 @@ async function route(request: Request, env: AppEnv, url: URL): Promise<Response>
       brevo: Boolean(env.BREVO_API_KEY),
       authenticated: Boolean(user),
       email: user?.email ?? null,
+      version: VERSION,
     });
   }
 
@@ -241,6 +255,14 @@ async function route(request: Request, env: AppEnv, url: URL): Promise<Response>
     throw new HttpError(401, "Sign in through Cloudflare Access");
   }
   checkMutation(request);
+
+  const updates = updateRoutes[`${method} ${path}`];
+  if (updates) {
+    const arg = updates === "chooseRepo" ? (await readJson<{ repo?: string }>(request)).repo : undefined;
+    const result = (await updaterStub(env).run(updates, arg)) as UpdaterResult;
+    if (!result.ok) return json({ error: result.message, code: result.code }, result.status);
+    return json(result.data);
+  }
 
   if (path === "/api/mailboxes") {
     const directory = directoryStub(env);

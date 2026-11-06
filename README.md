@@ -44,13 +44,27 @@ Open the app again: Cloudflare asks you to sign in, and then the setup page show
 
 Send yourself an email: it shows up in the inbox. Every address routed to the Worker gets its own mailbox in the app.
 
+### 5. Turn on updates
+
+The setup page offers to connect GitHub so nimbox can install its own updates later. It takes three clicks; see [Updating](#updating). You can skip it and do it later from **Settings** or from the update bar.
+
 ### Optional: keep a copy in another inbox
 
 In the app, open **Settings** and fill in **Also forward incoming mail to**. That address must first be added and verified under **Email Routing → Destination addresses**.
 
 ## Updating
 
-Your copy lives in your GitHub account. To get new versions, open it on GitHub and click **Sync fork** (or pull from this repository). Cloudflare rebuilds and redeploys on every push.
+When a new version is out, nimbox shows a bar at the top of the inbox with what changed and an **Update** button. Click it: nimbox puts the new version into your copy on GitHub, Cloudflare rebuilds it, and the page reloads on the new version after a minute or two.
+
+The first time, nimbox asks you to connect GitHub (the setup page offers this too, and you can skip it until you need it):
+
+1. nimbox shows a short code. Click **Copy code and open GitHub**, paste the code, and click **Continue**.
+2. GitHub asks you to **Authorize nimbox-updater**. Click **Authorize**.
+3. GitHub asks where to install nimbox-updater. Choose **Only select repositories**, pick your nimbox copy, and click **Install**.
+
+nimbox can only read and change the code of that one repository. The connection is stored in your own Worker, never in the browser. It stays active as long as you open nimbox at least once every 6 months; otherwise the Update button walks you through the same three steps again. You can disconnect anytime in **Settings**, or remove nimbox-updater on GitHub under **Settings → Applications**.
+
+Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`. Any other edits you made to your copy's code are replaced.
 
 ## How it works
 
@@ -85,3 +99,9 @@ curl -X POST "http://localhost:8799/cdn-cgi/handler/email?from=ana@example.org&t
 ```
 
 Run the checks with `npm run typecheck` and `npm test`.
+
+## Releasing
+
+1. Raise `version` in `package.json`.
+2. Add a `## <version>` section at the top of `CHANGELOG.md`, written for the people who use nimbox.
+3. Merge to `main`. The Release workflow publishes `v<version>` with that section as its notes, and every nimbox shows the update bar within an hour.

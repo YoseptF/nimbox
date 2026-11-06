@@ -8,6 +8,41 @@ export interface Status {
   brevo: boolean;
   authenticated: boolean;
   email: string | null;
+  version: string;
+}
+
+export interface GithubState {
+  enabled: boolean;
+  connected: boolean;
+  lapsed: boolean;
+  skipped: boolean;
+  login: string | null;
+  repo: string | null;
+  candidates: string[];
+  installUrl: string;
+}
+
+export interface Release {
+  version: string;
+  tag: string;
+  name: string;
+  notes: string;
+  url: string;
+  publishedAt: string;
+}
+
+export interface UpdateState {
+  current: string;
+  latest: Release | null;
+  available: boolean;
+  pending: { version: string; commit: string; startedAt: number } | null;
+}
+
+export interface DeviceCode {
+  userCode: string;
+  verificationUri: string;
+  expiresAt: number;
+  interval: number;
 }
 
 export interface MailboxInfo {

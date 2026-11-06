@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import { Composer } from "./Composer";
+import { githubReady } from "./GithubConnect";
+import { UpdateBanner } from "./UpdateBanner";
 import { snippetOf } from "./format";
 import { Settings } from "./Settings";
 import { Setup } from "./Setup";
 import { Sidebar } from "./Sidebar";
 import { ThreadList } from "./ThreadList";
 import { ThreadView } from "./ThreadView";
-import type { Draft, Folder, MailboxInfo, Status, Thread } from "./types";
+import type { Draft, Folder, GithubState, MailboxInfo, Status, Thread } from "./types";
 
 function readHash(): { folder: Folder; threadId: string | null } {
   const [, folder, threadId] = location.hash.split("/");
@@ -33,6 +35,7 @@ export function App() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [github, setGithub] = useState<GithubState | null>(null);
 
   const { folder, threadId } = route;
   const current = useMemo(() => mailboxes.find((m) => m.address === mailbox), [mailboxes, mailbox]);
@@ -54,7 +57,10 @@ export function App() {
       .status()
       .then(async (s) => {
         setStatus(s);
-        if (s.authenticated) await loadMailboxes();
+        if (s.authenticated) {
+          await loadMailboxes();
+          setGithub(await api.github().catch(() => null));
+        }
       })
       .catch((e: Error) => setError(e.message));
   }, [loadMailboxes]);
@@ -167,77 +173,83 @@ export function App() {
   if (!status) return <div className="fatal muted">Loading…</div>;
   if (!status.authenticated) return <Setup status={status} />;
 
-  if (mailboxes.length === 0) {
-    return <Setup status={status} onMailboxAdded={loadMailboxes} />;
+  const githubPending = Boolean(github?.enabled && !github.skipped && !github.lapsed && !githubReady(github));
+  if (mailboxes.length === 0 || githubPending) {
+    return <Setup status={status} hasMailboxes={mailboxes.length > 0} github={github} onMailboxAdded={loadMailboxes} onGithub={setGithub} />;
   }
 
   return (
-    <div className={`app ${threadId ? "reading" : ""}`}>
-      <Sidebar
-        mailboxes={mailboxes}
-        mailbox={mailbox}
-        folder={folder}
-        onMailbox={(address) => {
-          setMailbox(address);
-          openThread(null);
-        }}
-        onFolder={openFolder}
-        onCompose={() => setDraft({ to: "", cc: "", bcc: "", subject: "", text: "" })}
-        onSettings={() => setSettingsOpen(true)}
-        email={status.email}
-      />
-      <ThreadList
-        threads={threads}
-        selected={threadId}
-        me={mailbox}
-        folder={folder}
-        loading={loading}
-        hasMore={hasMore}
-        error={error}
-        onSelect={openThread}
-        onMore={() => loadThreads(true)}
-        onSearch={setQuery}
-        onRefresh={onThreadChanged}
-      />
-      <main className="reader">
-        {threadId && current ? (
-          <ThreadView
-            key={threadId}
+    <div className="shell">
+      <UpdateBanner github={github} onGithub={setGithub} />
+      <div className={`app ${threadId ? "reading" : ""}`}>
+        <Sidebar
+          mailboxes={mailboxes}
+          mailbox={mailbox}
+          folder={folder}
+          onMailbox={(address) => {
+            setMailbox(address);
+            openThread(null);
+          }}
+          onFolder={openFolder}
+          onCompose={() => setDraft({ to: "", cc: "", bcc: "", subject: "", text: "" })}
+          onSettings={() => setSettingsOpen(true)}
+          email={status.email}
+        />
+        <ThreadList
+          threads={threads}
+          selected={threadId}
+          me={mailbox}
+          folder={folder}
+          loading={loading}
+          hasMore={hasMore}
+          error={error}
+          onSelect={openThread}
+          onMore={() => loadThreads(true)}
+          onSearch={setQuery}
+          onRefresh={onThreadChanged}
+        />
+        <main className="reader">
+          {threadId && current ? (
+            <ThreadView
+              key={threadId}
+              mailbox={current}
+              threadId={threadId}
+              brevo={status.brevo}
+              onClose={() => openThread(null)}
+              onChanged={onThreadChanged}
+              onDeleted={() => {
+                openThread(null);
+                onThreadChanged();
+              }}
+            />
+          ) : (
+            <div className="empty muted">{threads.length ? "Select a conversation" : ""}</div>
+          )}
+        </main>
+        {draft && current && (
+          <Composer
             mailbox={current}
-            threadId={threadId}
+            initial={draft}
             brevo={status.brevo}
-            onClose={() => openThread(null)}
-            onChanged={onThreadChanged}
-            onDeleted={() => {
-              openThread(null);
+            onClose={() => setDraft(null)}
+            onSent={(sent) => {
+              setDraft(null);
               onThreadChanged();
+              if (folder !== "inbox") openThread(sent.threadId);
             }}
           />
-        ) : (
-          <div className="empty muted">{threads.length ? "Select a conversation" : ""}</div>
         )}
-      </main>
-      {draft && current && (
-        <Composer
-          mailbox={current}
-          initial={draft}
-          brevo={status.brevo}
-          onClose={() => setDraft(null)}
-          onSent={(sent) => {
-            setDraft(null);
-            onThreadChanged();
-            if (folder !== "inbox") openThread(sent.threadId);
-          }}
-        />
-      )}
-      {settingsOpen && (
-        <Settings
-          mailboxes={mailboxes}
-          status={status}
-          onClose={() => setSettingsOpen(false)}
-          onSaved={loadMailboxes}
-        />
-      )}
+        {settingsOpen && (
+          <Settings
+            mailboxes={mailboxes}
+            status={status}
+            github={github}
+            onGithub={setGithub}
+            onClose={() => setSettingsOpen(false)}
+            onSaved={loadMailboxes}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { api } from "./api";
+import { GithubConnect, githubReady } from "./GithubConnect";
 import { Icon } from "./icons";
 import { AddMailbox } from "./Setup";
-import type { MailboxInfo, Status } from "./types";
+import type { GithubState, MailboxInfo, Status } from "./types";
 
 function MailboxSettings({ mailbox, onSaved }: { mailbox: MailboxInfo; onSaved: () => void }) {
   const [displayName, setDisplayName] = useState(mailbox.displayName);
@@ -42,7 +43,44 @@ function MailboxSettings({ mailbox, onSaved }: { mailbox: MailboxInfo; onSaved: 
   );
 }
 
-export function Settings(props: { mailboxes: MailboxInfo[]; status: Status; onClose: () => void; onSaved: () => void }) {
+function Updates({ status, github, onGithub }: { status: Status; github: GithubState | null; onGithub: (github: GithubState) => void }) {
+  return (
+    <section className="updates-settings">
+      <h3>Updates</h3>
+      <p className="small">This is nimbox {status.version}.</p>
+      {github?.enabled &&
+        (githubReady(github) ? (
+          <div className="row">
+            <GithubConnect github={github} onChange={onGithub} />
+            <button
+              className="link small"
+              onClick={async () => {
+                if (confirm("Disconnect GitHub? Updates will ask you to connect again.")) onGithub(await api.disconnectGithub());
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <div className="turn-on">
+            <p className="small">
+              <b>Turn on updates.</b> Connect GitHub once so nimbox can install its own updates with one click.
+            </p>
+            <GithubConnect github={github} onChange={onGithub} />
+          </div>
+        ))}
+    </section>
+  );
+}
+
+export function Settings(props: {
+  mailboxes: MailboxInfo[];
+  status: Status;
+  github: GithubState | null;
+  onGithub: (github: GithubState) => void;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   return (
     <div className="overlay" onClick={props.onClose}>
       <div className="dialog" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Settings">
@@ -58,6 +96,7 @@ export function Settings(props: { mailboxes: MailboxInfo[]; status: Status; onCl
             {props.status.brevo ? <b>connected</b> : <b className="error-text">not set up (add the BREVO_API_KEY secret)</b>}.
           </p>
         </section>
+        <Updates status={props.status} github={props.github} onGithub={props.onGithub} />
         {props.mailboxes.map((m) => (
           <MailboxSettings key={m.address} mailbox={m} onSaved={props.onSaved} />
         ))}

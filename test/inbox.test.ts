@@ -155,3 +155,15 @@ describe("sending", () => {
     expect(response.status).toBe(403);
   });
 });
+
+describe("deleting", () => {
+  it("deletes a conversation and its stored files", async () => {
+    const box = "del@example.com";
+    await deliver(rawEmail({ from: "hal@example.org", to: box, subject: "Bye", messageId: "<h1@example.org>" }), "hal@example.org", box);
+    const [thread] = await threads(box);
+    const response = await api(`/api/mailboxes/${box}/threads/${thread.id}`, { method: "DELETE", headers: { "content-type": "application/json" } });
+    expect(response.status).toBe(200);
+    expect(await threads(box)).toHaveLength(0);
+    expect((await appEnv.MAIL.list({ prefix: `${box}/` })).objects).toHaveLength(0);
+  });
+});

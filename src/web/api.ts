@@ -1,23 +1,39 @@
-import type { Body, Folder, MailboxInfo, Message, Status, Thread } from "./types";
+import type { Body, DeviceCode, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code?: string) {
     super(message);
   }
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("content-type", "application/json");
+  if (init.method && init.method !== "GET") headers.set("content-type", "application/json");
   const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(response.status, (data as { error?: string }).error ?? `Request failed (${response.status})`);
+  if (!response.ok) {
+    const error = data as { error?: string; code?: string };
+    throw new ApiError(response.status, error.error ?? `Request failed (${response.status})`, error.code);
+  }
   return data as T;
 }
 
 const box = (address: string) => `/api/mailboxes/${encodeURIComponent(address)}`;
 
 export const api = {
+  github: () => request<GithubState>("/api/github"),
+  connectGithub: () => request<DeviceCode>("/api/github/connect", { method: "POST", body: "{}" }),
+  pollGithub: () =>
+    request<{ status: "pending" | "expired" | "denied" | "connected"; interval?: number; github: GithubState }>("/api/github/poll", {
+      method: "POST",
+      body: "{}",
+    }),
+  chooseRepo: (repo: string) => request<GithubState>("/api/github/repo", { method: "POST", body: JSON.stringify({ repo }) }),
+  skipGithub: () => request<GithubState>("/api/github/skip", { method: "POST", body: "{}" }),
+  disconnectGithub: () => request<GithubState>("/api/github", { method: "DELETE", body: "{}" }),
+  updates: () => request<UpdateState>("/api/updates"),
+  applyUpdate: () =>
+    request<{ status: "updated" | "up-to-date"; version: string; commit?: string }>("/api/updates/apply", { method: "POST", body: "{}" }),
   status: () => request<Status>("/api/status"),
   mailboxes: () => request<MailboxInfo[]>("/api/mailboxes"),
   addMailbox: (address: string) => request<{ address: string }>("/api/mailboxes", { method: "POST", body: JSON.stringify({ address }) }),

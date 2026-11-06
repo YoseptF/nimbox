@@ -4,6 +4,7 @@ import type { AppEnv } from "./env";
 
 export { Mailbox } from "./mailbox";
 export { Directory } from "./directory";
+export { Updater } from "./updater";
 
 export default {
   async fetch(request, env) {
