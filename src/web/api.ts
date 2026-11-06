@@ -8,7 +8,7 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("content-type", "application/json");
+  if (init.method && init.method !== "GET") headers.set("content-type", "application/json");
   const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, (data as { error?: string }).error ?? `Request failed (${response.status})`);
