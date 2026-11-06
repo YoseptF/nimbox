@@ -43,7 +43,7 @@ Bookmark it: this is the link to your inbox.
 Open that address and sign in. nimbox shows a short checklist and walks you through the rest, with links that open the right page and values you can copy:
 
 - **Your email address**: type the address you want to use.
-- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email.
+- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email. If your key can't read domains, nimbox links straight to [your domains in Brevo](https://app.brevo.com/senders/domain/list) instead.
 - **Receiving**: one routing rule in Cloudflare's Email Routing. nimbox shows the exact address and Worker name to pick. Turning Email Routing on makes Cloudflare take over your domain's incoming mail, so it stops going to any previous forwarding service (ImprovMX, for example).
 - **One-click updates** (optional): connect GitHub so nimbox can update itself. See [Updating](#updating).
 

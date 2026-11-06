@@ -8,6 +8,7 @@ const CF_EMAIL_ROUTING = "https://dash.cloudflare.com/?to=/:account/email-servic
 const CF_DNS = "https://dash.cloudflare.com/?to=/:account/:zone/dns/records";
 const BREVO_SIGNUP = "https://www.brevo.com";
 const BREVO_KEYS = "https://app.brevo.com/settings/keys/api";
+const BREVO_DOMAINS = "https://app.brevo.com/senders/domain/list";
 
 export function workerName() {
   const host = location.hostname;
@@ -296,7 +297,7 @@ export function Setup(props: {
               ) : (
                 <div key={d.domain}>
                   <p>
-                    In <OpenLink href="https://app.brevo.com">Brevo</OpenLink>, open <b>Senders, Domains &amp; Dedicated IPs → Domains</b>, add <b>{d.domain}</b>,
+                    <OpenLink href={BREVO_DOMAINS}>Open your domains in Brevo</OpenLink>, add <b>{d.domain}</b>,
                     and follow Brevo's steps to confirm it. Then come back and send a test email.
                   </p>
                 </div>
