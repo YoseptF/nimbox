@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/embed-assets.mjs",
     "deploy": "wrangler deploy",
-    "dev": "vite build && wrangler dev --port 8799",
+    "dev": "npm run build && wrangler dev --port 8799",
     "typecheck": "tsc -p . && tsc -p src/worker && tsc -p test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pretest": "npm run build"
   },
   "dependencies": {
     "jose": "^6.2.15",
