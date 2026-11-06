@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- The README explains how to remove nimbox completely, including the sign-in protection that Cloudflare keeps after the Worker is deleted.
+- The README explains how to change how often nimbox asks you to sign in.
+
 ## 0.3.1
 
 - Sending turns Done on the setup page as soon as a test email goes out, even when nimbox can't read your domain from Brevo.
