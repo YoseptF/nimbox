@@ -16,7 +16,15 @@ Your own email inbox on your own Cloudflare account. It receives mail for your d
 
 1. In Brevo, open **Senders, Domains & Dedicated IPs → Domains** and add your domain.
 2. Brevo shows a few DNS records (DKIM, DMARC and a code to prove you own the domain). Add each one in Cloudflare under your domain's **DNS → Records**, then click **Verify** in Brevo.
-3. Open **SMTP & API → API Keys** and create a key. Keep it for the next step.
+3. Open **SMTP & API → API Keys** and click **Generate new API Key**. Fill in the form:
+   - **Key name**: anything, for example `nimbox`.
+   - **Expiry**: pick the longest option.
+   - **Access**: **Restricted**.
+   - **Permissions**: set **Transactional email** to **All** (Read is not enough to send). Leave everything else on **None**.
+
+   Copy the key and keep it for the next step.
+
+Brevo also turns off a key that goes 90 days without being used. If you send nothing for that long, sending fails until you create a new key the same way and replace `BREVO_API_KEY` in the Worker under **Settings → Variables and Secrets**.
 
 ### 2. Deploy
 
