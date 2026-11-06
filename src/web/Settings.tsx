@@ -2,8 +2,8 @@ import { useState } from "react";
 import { api } from "./api";
 import { GithubConnect, githubReady } from "./GithubConnect";
 import { Icon } from "./icons";
-import { AddMailbox } from "./Setup";
-import type { GithubState, MailboxInfo, Status } from "./types";
+import { AddressesSection, CloudflareSection, SignInLengthSection, UninstallSection } from "./SettingsSections";
+import type { CloudflareState, GithubState, MailboxInfo, Status } from "./types";
 
 function MailboxSettings({ mailbox, onSaved }: { mailbox: MailboxInfo; onSaved: () => void }) {
   const [displayName, setDisplayName] = useState(mailbox.displayName);
@@ -15,8 +15,14 @@ function MailboxSettings({ mailbox, onSaved }: { mailbox: MailboxInfo; onSaved: 
       onSubmit={async (e) => {
         e.preventDefault();
         try {
-          await api.updateMailbox(mailbox.address, { displayName, forwardTo });
-          setMessage("Saved");
+          const saved = await api.updateMailbox(mailbox.address, { displayName, forwardTo });
+          setMessage(
+            saved.forwardStatus === "sent"
+              ? `Saved. Cloudflare sent a confirmation email to ${saved.forwardTo}: click the link in it, and forwarding starts.`
+              : saved.forwardStatus === "manual"
+                ? `Saved. Forwarding starts once ${saved.forwardTo} is confirmed under Email Routing → Destination addresses in Cloudflare (or connect Cloudflare below and save again).`
+                : "Saved",
+          );
           onSaved();
         } catch (err) {
           setMessage((err as Error).message);
@@ -32,7 +38,6 @@ function MailboxSettings({ mailbox, onSaved }: { mailbox: MailboxInfo; onSaved: 
         <span>Also forward incoming mail to</span>
         <input type="email" value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} placeholder="Leave empty to keep mail only here" />
       </label>
-      <p className="muted small">The forward address must be verified under Email Routing → Destination addresses.</p>
       <div className="row">
         <button className="primary" type="submit">
           Save
@@ -78,6 +83,8 @@ export function Settings(props: {
   status: Status;
   github: GithubState | null;
   onGithub: (github: GithubState) => void;
+  cloudflare: CloudflareState | null;
+  onCloudflare: (cloudflare: CloudflareState) => void;
   onClose: () => void;
   onSaved: () => void;
   onOpenSetup: () => void;
@@ -101,14 +108,13 @@ export function Settings(props: {
           </p>
         </section>
         <Updates status={props.status} github={props.github} onGithub={props.onGithub} />
+        <AddressesSection mailboxes={props.mailboxes} cloudflare={props.cloudflare} onChanged={props.onSaved} />
         {props.mailboxes.map((m) => (
           <MailboxSettings key={m.address} mailbox={m} onSaved={props.onSaved} />
         ))}
-        <section>
-          <h3>Add an address</h3>
-          <p className="muted small">Addresses appear on their own when mail arrives. Add one here to send from it before that.</p>
-          <AddMailbox onAdded={props.onSaved} />
-        </section>
+        {props.cloudflare?.connected && <SignInLengthSection />}
+        <CloudflareSection cloudflare={props.cloudflare} onChange={props.onCloudflare} />
+        <UninstallSection cloudflare={props.cloudflare} github={props.github} />
       </div>
     </div>
   );

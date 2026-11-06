@@ -25,7 +25,7 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
 - **Build command** and **Deploy command**: already filled in with `npm run build` and `npm run deploy`. Leave them.
 - **Enable Preview builds**: turn it off. Your copy has no use for preview builds, and leaving it on only adds builds.
 - **Preview command**: leave as is. It only runs for preview builds, which you just turned off.
-- **Protect with Cloudflare Access**: turn it on. This is the sign-in that keeps your mail private. Two more settings appear:
+- **Protect with Cloudflare Access**: turn it on. This is the sign-in that keeps your mail private. (If you forget, nimbox's first page can turn it on for you.) Two more settings appear:
   - **Scope**: pick **All traffic**. With the default, **Previews only**, your inbox gets no sign-in page and nimbox refuses to open it.
   - **Authentication policy**: open **Add policy** and pick **Cloudflare account**, so only members of your Cloudflare account can get in. Don't use **Email domain** with a public mail service like gmail.com: that lets in every account on it.
   - **Session duration**: leave the default.
@@ -40,14 +40,25 @@ Bookmark it: this is the link to your inbox.
 
 ### 2. Follow the setup page
 
-Open that address and sign in. nimbox shows a short checklist and walks you through the rest, with links that open the right page and values you can copy:
+Open that address and sign in. nimbox shows a short checklist:
 
+- **Connect Cloudflare**: one button. Cloudflare shows what nimbox may change and asks which account to use; pick the one you deployed nimbox to. After that, nimbox does the Cloudflare parts of the next steps for you.
 - **Your email address**: type the address you want to use.
-- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email. If your key can't read domains, nimbox links straight to [your domains in Brevo](https://app.brevo.com/senders/domain/list) instead. The step turns Done once Brevo confirms your domain or a test email goes out.
-- **Receiving**: if your domain still sends its mail somewhere else (a forwarder like ImprovMX, for example), Cloudflare refuses to turn on Email Routing until those records are gone, and it does not remove them for you. nimbox looks up your domain and lists exactly which records to delete under **DNS → Records**: the old mail (MX) records and the old SPF record (a domain can only have one; Cloudflare adds its own). Leave every other record, like Brevo's code, DMARC and site verification records. Then, in Cloudflare's Email Routing, click **Onboard Domain**, choose your domain and click **Done** (or **Activate**). Cloudflare then adds the records that bring your mail to it, so mail stops going to any previous forwarding service (ImprovMX, for example). Then open **Routing Rules** and create one rule; nimbox shows the exact **Email pattern** and Worker to pick. If you use several addresses at your domain, turn on the **Catch-all** rule instead, with the same action and Worker: every address gets its own inbox in nimbox.
+- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then adds the records Brevo needs to your domain's DNS (one button), and lets you send yourself a test email. The step turns Done once Brevo confirms your domain or a test email goes out.
+- **Receiving**: one button. If your domain still sends its mail somewhere else (a forwarder like ImprovMX, for example), nimbox first shows exactly which old records it will delete and asks before deleting them. It then turns on Cloudflare's Email Routing and sends your address to nimbox. From then on, mail stops going to the old service.
 - **One-click updates** (optional): connect GitHub so nimbox can update itself. See [Updating](#updating).
 
-If the page says sign-in protection is not on, you skipped **Protect with Cloudflare Access** in step 1; the page shows where to turn it on.
+If the page says sign-in protection is not on, you skipped **Protect with Cloudflare Access** in step 1. The page then offers to connect Cloudflare and turn it on with one click.
+
+Without connecting Cloudflare, every step still works: nimbox shows the records to add, links to the right dashboard pages and the exact values to pick instead.
+
+### More addresses, forwarding and sign-in
+
+In nimbox's **Settings**:
+
+- **Addresses**: add or remove addresses at your domain. With Cloudflare connected, each one gets its own routing rule automatically, and mail to addresses you never added bounces back to the sender. Removing an address deletes its mail.
+- **Also forward incoming mail to**: keep a copy in another inbox. With Cloudflare connected, Cloudflare emails that inbox a confirmation link; click it and forwarding starts.
+- **Sign in again every**: how often nimbox asks you to sign in (1 hour to 1 month; 1 day by default).
 
 ### Brevo keys
 
@@ -59,14 +70,6 @@ On [Brevo's API keys page](https://app.brevo.com/settings/keys/api), click **Gen
 - **Permissions**: set **Transactional email** to **All** (Read is not enough to send) and **Account** to **Read**, so nimbox can see when your domain is ready. Leave everything else on **None**.
 
 Brevo turns off a key that goes 90 days without being used. If that happens, nimbox's setup page says the key was not accepted and lets you paste a new one.
-
-### Optional: keep a copy in another inbox
-
-In the app, open **Settings** and fill in **Also forward incoming mail to**. That address must first be added and verified under **Email Routing → Destination addresses**.
-
-### Change how often you sign in
-
-By default nimbox asks you to sign in again every 24 hours. To change that, open the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Zero Trust → Access controls → Applications**, click **Edit** on the app named after your project (for a project called `inbox`, it is **inbox - Cloudflare Workers**), pick a **Session Duration** (up to one month), and save.
 
 ## Updating
 
@@ -84,15 +87,23 @@ Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`.
 
 ## Uninstall
 
-An install creates a few things in Cloudflare, GitHub and Brevo. To remove nimbox completely, delete each of them. Deleting your mail can't be undone, so download anything you want to keep first.
+In nimbox, open **Settings → Remove nimbox**, type **delete everything**, and confirm. With Cloudflare connected, nimbox deletes all your mail and removes what it created in Cloudflare: the routing rules for your addresses, the sign-in protection, the storage bucket, and finally the app itself. Mail sent to your addresses afterwards bounces back to the sender.
 
-1. **Stop sending mail to nimbox.** Open [Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), click your domain, open **Routing Rules**, and delete the rule (or turn off the **Catch-all**) that sends mail to your nimbox Worker. If you still want mail for your domain, point it somewhere else at the same time; otherwise it bounces.
+Three things are left for you, because nimbox has no permission to touch them:
+
+1. **Your copy on GitHub.** Open it, go to **Settings**, and click **Delete this repository** at the bottom.
+2. **The update app**, if you turned on one-click updates. On [your installed GitHub Apps](https://github.com/settings/installations), click **Configure** next to **nimbox-updater** and choose **Uninstall**; then **Revoke** it on [your authorized GitHub Apps](https://github.com/settings/apps/authorizations).
+3. **The Brevo key**, if you don't use it for anything else: delete it on [Brevo's API keys page](https://app.brevo.com/settings/keys/api).
+
+Cloudflare also lists nimbox under your profile's [connected applications](https://dash.cloudflare.com/?to=/profile/access-management/authorization) until you revoke it there.
+
+### Uninstall by hand
+
+1. **Stop sending mail to nimbox.** Open [Email Routing](https://dash.cloudflare.com/?to=/:account/email-service/routing), click your domain, open **Routing Rules**, and delete the rules that send mail to your nimbox Worker. If you still want mail for your domain, point it somewhere else at the same time; otherwise it bounces.
 2. **Delete the Worker.** Open [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages), click your project, open **Settings**, and click **Delete** at the bottom.
 3. **Delete its sign-in protection.** Deleting the Worker leaves this behind. Open the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Zero Trust → Access controls → Applications**, and delete the app named after your project, like **inbox - Cloudflare Workers**.
 4. **Delete your stored mail.** Open [R2](https://dash.cloudflare.com/?to=/:account/r2/overview), click the `nimbox-mail` bucket (or the name you picked), open **Settings**, click **Empty** under **Empty Bucket**, then delete the bucket.
-5. **Delete your copy on GitHub.** Open your copy (the project name you picked), go to **Settings**, and click **Delete this repository** at the bottom.
-6. **Remove the update app from GitHub**, if you turned on one-click updates. On [your installed GitHub Apps](https://github.com/settings/installations), click **Configure** next to **nimbox-updater** and choose **Uninstall**. Then on [your authorized GitHub Apps](https://github.com/settings/apps/authorizations), click **Revoke** next to **nimbox-updater**.
-7. **Delete the Brevo key**, if you don't use it for anything else. On [Brevo's API keys page](https://app.brevo.com/settings/keys/api), delete the key you made for nimbox.
+5. Then the three GitHub and Brevo steps above.
 
 ## How it works
 
@@ -127,6 +138,12 @@ curl -X POST "http://localhost:8799/cdn-cgi/handler/email?from=ana@example.org&t
 ```
 
 Run the checks with `npm run typecheck` and `npm test`.
+
+## Cloudflare connection (for maintainers)
+
+"Connect Cloudflare" uses a public Cloudflare OAuth client owned by the maintainer, with PKCE and no secret. Cloudflare only allows exact redirect URLs, and every install has its own address, so Cloudflare sends people back to one fixed page, [`docs/cloudflare.html`](docs/cloudflare.html) on this repository's GitHub Pages. That page shows which nimbox the sign-in belongs to and continues there only when the person clicks. It stores nothing. The sign-in can't be finished without the secret code that only the nimbox that started it holds, and nimbox keeps the connection only if the Cloudflare account really runs that nimbox.
+
+The feature stays hidden until `CLOUDFLARE_CLIENT_ID` in `src/worker/release.ts` is set.
 
 ## Releasing
 

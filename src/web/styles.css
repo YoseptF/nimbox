@@ -1153,3 +1153,47 @@ pre {
 .turn-on p {
   margin: 0 0 10px;
 }
+
+.notice-bar {
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.danger {
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.danger h3 {
+  color: var(--danger);
+  margin-top: 0;
+}
+
+.button-danger {
+  background: var(--danger);
+  color: #fff;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-weight: 600;
+}
+
+.button-danger:disabled {
+  opacity: 0.5;
+}
+
+.address-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+}
+
+.address-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}

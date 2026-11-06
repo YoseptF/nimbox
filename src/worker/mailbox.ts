@@ -253,6 +253,10 @@ export class Mailbox extends DurableObject<AppEnv> {
     return row.n as number;
   }
 
+  async destroy() {
+    await this.ctx.storage.deleteAll();
+  }
+
   getSettings(): MailboxSettings {
     const rows = this.sql.exec("SELECT key, value FROM settings").toArray();
     const map = Object.fromEntries(rows.map((r) => [r.key as string, r.value as string]));

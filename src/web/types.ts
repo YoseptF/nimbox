@@ -115,3 +115,26 @@ export interface Draft {
   text: string;
   replyTo?: string;
 }
+
+export interface CloudflareState {
+  enabled: boolean;
+  connected: boolean;
+  lapsed: boolean;
+  accountName?: string;
+  workerName?: string;
+}
+
+export interface ReceivingStatus {
+  domain: string;
+  zone: boolean;
+  enabled: boolean;
+  conflicts: { id: string; type: string; content: string; priority?: number }[];
+  missing: string[];
+  elsewhere: string[];
+}
+
+export interface SessionState {
+  protected: boolean;
+  duration: string | null;
+  choices: string[];
+}
