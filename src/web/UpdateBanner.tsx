@@ -98,7 +98,7 @@ export function UpdateBanner({ github, onGithub }: { github: GithubState | null;
         <div className="update-row">
           <span>
             {slow
-              ? `nimbox ${state.pending.version} was sent to your copy, but Cloudflare has not finished deploying it. Check Workers & Pages → nimbox → Deployments in the Cloudflare dashboard.`
+              ? `nimbox ${state.pending.version} was sent to ${github?.repo ?? "your copy"}, but Cloudflare has not finished deploying it. In the Cloudflare dashboard, open Workers & Pages, select your Worker, and check its Deployments tab.`
               : `Installing nimbox ${state.pending.version}. Cloudflare is rebuilding it; this page reloads when it's ready.`}
           </span>
         </div>
