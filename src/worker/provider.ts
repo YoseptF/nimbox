@@ -1,3 +1,5 @@
+import { dnsLookup, mxHost } from "./dns";
+
 export type MailProvider = "gmail" | "outlook" | "office365" | "yahoo" | "icloud" | "proton";
 
 const BY_DOMAIN: Record<string, MailProvider> = {
@@ -32,14 +34,9 @@ export async function detectProvider(email: string): Promise<MailProvider | null
   const known = BY_DOMAIN[domain] ?? (regional ? BY_DOMAIN[`${regional[1]}.com`] : undefined);
   if (known) return known;
   try {
-    const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`, {
-      headers: { accept: "application/dns-json" },
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as { Answer?: { type: number; data: string }[] };
-    for (const answer of data.Answer ?? []) {
+    for (const answer of await dnsLookup(domain, "MX")) {
       if (answer.type !== 15) continue;
-      const host = answer.data.split(/\s+/).pop()?.replace(/\.$/, "").toLowerCase() ?? "";
+      const host = mxHost(answer.data);
       const match = BY_MX.find(([pattern]) => pattern.test(host));
       if (match) return match[1];
     }

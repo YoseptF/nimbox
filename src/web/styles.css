@@ -905,6 +905,26 @@ a {
   max-width: 360px;
 }
 
+.old-records {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+  width: 100%;
+}
+
+.old-records th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 4px 6px;
+}
+
+.old-records td {
+  padding: 6px;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+
 .row.test {
   margin-top: 12px;
   flex-wrap: wrap;

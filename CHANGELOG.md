@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2
+
+- The README explains how to remove nimbox completely, including the sign-in protection that Cloudflare keeps after the Worker is deleted.
+- The README explains how to change how often nimbox asks you to sign in.
+- The Receiving step matches Cloudflare's new Email Routing screens (Onboard Domain, then Routing Rules) and explains the Catch-all option for several addresses.
+- If your domain's mail still goes to another service, the Receiving step lists exactly which old records to delete so Cloudflare can take over.
+
 ## 0.3.1
 
 - Sending turns Done on the setup page as soon as a test email goes out, even when nimbox can't read your domain from Brevo.

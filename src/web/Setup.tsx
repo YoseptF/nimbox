@@ -180,6 +180,7 @@ export function Setup(props: {
   const local = address.split("@")[0];
   const domain = address.split("@")[1] ?? "";
   const name = workerName();
+  const oldRecords = setup?.mailRecords.find((r) => r.domain === domain)?.remove ?? [];
   const sendingReady = Boolean(
     setup?.brevo.connected && (setup.brevo.sendVerified || (setup.domains.length > 0 && setup.domains.every((d) => d.state === "verified"))),
   );
@@ -341,29 +342,60 @@ export function Setup(props: {
           <>
             <p>Tell Cloudflare to deliver your mail to nimbox:</p>
             <ol className="howto">
+              {oldRecords.length > 0 && (
+                <li>
+                  Your domain still points its mail somewhere else, and Cloudflare won't take over until that's gone.{" "}
+                  <OpenLink href={CF_DNS}>Open your DNS records in Cloudflare</OpenLink>, pick {domain ? <b>{domain}</b> : "your domain"}, and delete exactly
+                  these records:
+                  <table className="old-records">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Name</th>
+                        <th>Content</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {oldRecords.map((r, i) => (
+                        <tr key={i}>
+                          <td>{r.type}</td>
+                          <td>{r.name === "@" ? domain : r.name}</td>
+                          <td className="wrap">
+                            <code>{r.content}</code>
+                            {r.priority !== undefined ? <span className="muted small"> (priority {r.priority})</span> : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <span className="muted small">
+                    Leave every other record alone, including Brevo's code, DMARC and any site verification records. A domain can only have one SPF
+                    record, so the old one goes; Cloudflare adds its own.
+                  </span>
+                </li>
+              )}
               <li>
-                <OpenLink href={CF_EMAIL_ROUTING}>Open Email Routing in Cloudflare</OpenLink>
-                {domain ? (
-                  <>
-                    {" "}
-                    and pick <b>{domain}</b>
-                  </>
-                ) : null}
-                . If it asks, turn Email Routing on.
+                <OpenLink href={CF_EMAIL_ROUTING}>Open Email Routing in Cloudflare</OpenLink> and click <b>Onboard Domain</b>. If{" "}
+                {domain ? <b>{domain}</b> : "your domain"} is already listed there, click it instead and go straight to <b>Routing Rules</b>.
               </li>
               <li>
-                Open <b>Routing rules</b> and click <b>Create routing rule</b>.
+                Choose {domain ? <b>{domain}</b> : "your domain"} and click <b>Done</b> (or <b>Activate</b>). Cloudflare adds the records that bring your mail
+                to it. From this moment, mail for {domain ? <b>{domain}</b> : "your domain"} no longer goes to any old forwarding service.
               </li>
               <li>
+                Open <b>Routing Rules</b> and click <b>Create routing rule</b>:
                 <div className="fields">
-                  <span>Email address</span> {local ? <Value value={local} /> : <i>your address</i>}
+                  <span>Email pattern</span> {local ? <Value value={local} /> : <i>your address</i>}
                   <span>Action</span> <b>Send to a Worker</b>
                   <span>Worker</span> {name ? <Value value={name} /> : <b>your nimbox app</b>}
                 </div>
                 Then click <b>Save</b>.
               </li>
             </ol>
-            <p className="muted small">Cloudflare stops sending this domain's mail to any old forwarding service once Email Routing is on.</p>
+            <p className="muted small">
+              Use several addresses at {domain ? <b>{domain}</b> : "your domain"}? Instead of one rule per address, turn on the <b>Catch-all</b> rule
+              under <b>Routing Rules</b> with the same action and Worker. Every address then gets its own inbox in nimbox.
+            </p>
             <button onClick={load} disabled={checking}>
               {checking ? "Checking…" : "Check again"}
             </button>
