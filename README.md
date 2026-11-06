@@ -31,7 +31,12 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
   - **Session duration**: leave the default.
 - **Advanced settings**: leave as they are.
 
-When it finishes you get an address like `https://<project-name>.<your-account>.workers.dev`.
+When it finishes, your nimbox has its own address, like `https://<project-name>.<your-account-subdomain>.workers.dev`. To find it:
+
+- In the Cloudflare dashboard, open **Workers & Pages**, click your project, and open the **Domains** tab. Or:
+- Scroll to the last lines of the build log on the Deploy page; the address is printed there.
+
+Bookmark it: this is the link to your inbox.
 
 ### 2. Follow the setup page
 
