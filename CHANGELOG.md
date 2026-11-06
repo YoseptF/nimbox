@@ -4,6 +4,7 @@
 
 - The README explains how to remove nimbox completely, including the sign-in protection that Cloudflare keeps after the Worker is deleted.
 - The README explains how to change how often nimbox asks you to sign in.
+- The Receiving step matches Cloudflare's new Email Routing screens (Onboard Domain, then Routing Rules) and explains the Catch-all option for several addresses.
 
 ## 0.3.1
 
