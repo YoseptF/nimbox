@@ -197,7 +197,7 @@ export function Setup(props: {
     setTestResult(null);
     try {
       await api.testEmail(address);
-      setTestResult({ ok: true, text: `Sent to ${address}. If receiving is set up, it shows up in your inbox in a few seconds.` });
+      setTestResult({ ok: true, text: `Sent. Check ${props.status.email ?? "your inbox"} for an email from ${address}.` });
       setSetup((current) => (current ? { ...current, brevo: { ...current.brevo, sendVerified: true } } : current));
       setTimeout(load, 8000);
     } catch (e) {
@@ -311,9 +311,12 @@ export function Setup(props: {
                 </div>
               ),
             )}
-            {address && !setup.domains.some((d) => d.state === "badkey") && (
+            {address && props.status.email && !setup.domains.some((d) => d.state === "badkey") && (
               <div className="row test">
-                <button onClick={sendTest}>Send me a test email</button>
+                <span className="small">
+                  We'll send a test from <b>{address}</b> to <b>{props.status.email}</b>.
+                </span>
+                <button onClick={sendTest}>Send test email</button>
                 {testResult && <span className={testResult.ok ? "small" : "error-text small"}>{testResult.text}</span>}
               </div>
             )}

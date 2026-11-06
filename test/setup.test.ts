@@ -97,7 +97,7 @@ describe("setup", () => {
     const test = await call("/api/setup/test-email", { method: "POST", body: JSON.stringify({ mailbox: "hi@setup.example" }) });
     expect(test.status).toBe(200);
     expect(await (await call("/api/setup")).json()).toMatchObject({ brevo: { sendVerified: true } });
-    expect(calls.find((c) => c.path === "/v3/smtp/email")?.body).toMatchObject({ sender: { email: "hi@setup.example" }, to: [{ email: "hi@setup.example" }] });
+    expect(calls.find((c) => c.path === "/v3/smtp/email")?.body).toMatchObject({ sender: { email: "hi@setup.example" }, to: [{ email: "dev@example.com" }] });
 
     await call("/api/setup/brevo-key", { method: "POST", body: JSON.stringify({ key: `${key}x` }) });
     expect(await (await call("/api/setup")).json()).toMatchObject({ brevo: { sendVerified: false } });

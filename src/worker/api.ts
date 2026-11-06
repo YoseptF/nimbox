@@ -245,7 +245,7 @@ function domainsOf(addresses: string[]) {
   return [...new Set(addresses.map((a) => a.slice(a.indexOf("@") + 1)))];
 }
 
-async function setupRoute(request: Request, env: AppEnv, path: string, method: string): Promise<Response | null> {
+async function setupRoute(request: Request, env: AppEnv, path: string, method: string, userEmail: string): Promise<Response | null> {
   const directory = directoryStub(env);
   if (path === "/api/setup" && method === "GET") {
     const addresses = await directory.list();
@@ -280,11 +280,23 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const mailbox = await requireMailbox(env, (await readJson<{ mailbox?: string }>(request)).mailbox ?? "");
     const apiKey = await brevoKey(env);
     if (!apiKey) throw new HttpError(409, "Add your Brevo key first");
+    if (!ADDRESS.test(userEmail)) throw new HttpError(409, "nimbox could not find the email you signed in with, so it has nowhere to send the test.");
     const settings = await mailboxStub(env, mailbox).getSettings();
-    const me = { name: settings.displayName, address: mailbox };
-    const text = "This is a test from nimbox. If you can read this in your nimbox inbox, sending and receiving both work.";
+    const from = { name: settings.displayName, address: mailbox };
+    const text = `This is a test from nimbox. It was sent from ${mailbox}, so sending works.`;
     try {
-      await sendWithBrevo(apiKey, { from: me, to: [me], cc: [], bcc: [], subject: "nimbox test", text, html: textToHtml(text), inReplyTo: null, references: [], attachments: [] });
+      await sendWithBrevo(apiKey, {
+        from,
+        to: [{ name: "", address: userEmail }],
+        cc: [],
+        bcc: [],
+        subject: "nimbox test",
+        text,
+        html: textToHtml(text),
+        inReplyTo: null,
+        references: [],
+        attachments: [],
+      });
     } catch (error) {
       throw new HttpError(502, plainBrevoError(error));
     }
@@ -315,11 +327,11 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
     });
   }
 
-  const user = await authenticate(request, env, ctx);
+  const user = await authenticate(request, env, ctx, path === "/api/setup/test-email");
   if (!user) throw new HttpError(401, "Sign in first");
   checkMutation(request);
 
-  const setup = await setupRoute(request, env, path, method);
+  const setup = await setupRoute(request, env, path, method, user.email);
   if (setup) return setup;
 
   const updates = updateRoutes[`${method} ${path}`];

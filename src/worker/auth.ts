@@ -37,7 +37,7 @@ export async function authenticate(
   ctx?: ExecutionContext,
   wantEmail = false,
 ): Promise<{ email: string } | null> {
-  if (devBypass(request, env)) return { email: "dev@localhost" };
+  if (devBypass(request, env)) return { email: "dev@example.com" };
   const viaAccess = await fromAccessContext(ctx, wantEmail);
   if (viaAccess) return viaAccess;
   if (!accessSecretsSet(env)) return null;
