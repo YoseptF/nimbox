@@ -865,3 +865,107 @@ pre {
     margin-left: 14px;
   }
 }
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shell .app {
+  flex: 1;
+  min-height: 0;
+}
+
+.update-banner {
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  padding: 8px 16px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.update-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.release-notes {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.release-notes h4 {
+  margin: 8px 0 2px;
+  font-size: 13px;
+}
+
+.release-notes p {
+  margin: 2px 0;
+}
+
+.release-notes ul {
+  margin: 2px 0;
+  padding-left: 20px;
+}
+
+.github-connect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.github-connect p {
+  margin: 0;
+}
+
+.device-code {
+  font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+  padding: 8px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  user-select: all;
+}
+
+.button-link {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.choice {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: left;
+}
+
+.choice:hover {
+  background: var(--hover);
+}
+
+.skip {
+  margin-top: 10px;
+}
+
+.updates-settings .row {
+  align-items: baseline;
+}
+
+.turn-on {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.turn-on p {
+  margin: 0 0 10px;
+}
