@@ -6,6 +6,7 @@ import { rawKey } from "./email";
 import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
 import { newId } from "./ids";
+import { oldMailRecords } from "./dns";
 import { detectProvider } from "./provider";
 import { buildEml, textToHtml, type OutgoingAttachment } from "./mime";
 import type { Folder, MessageRow, Person } from "./types";
@@ -253,6 +254,8 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const apiKey = await brevoKey(env);
     const domains = apiKey ? await Promise.all(domainsOf(addresses).map((d) => brevoDomain(apiKey, d).catch(() => ({ domain: d, state: "unknown" as const, records: [] })))) : [];
     const incoming = await Promise.all(addresses.map((a) => mailboxStub(env, a).hasIncoming()));
+    const received = incoming.some(Boolean);
+    const mailRecords = received ? [] : await Promise.all(domainsOf(addresses).map((d) => oldMailRecords(d)));
     return json({
       brevo: {
         connected: Boolean(apiKey),
@@ -260,7 +263,8 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
         sendVerified: Boolean(apiKey) && (await directory.getSetting("sendVerified")) === "1",
       },
       domains,
-      received: incoming.some(Boolean),
+      received,
+      mailRecords,
     });
   }
   if (path === "/api/setup/brevo-key" && method === "POST") {
