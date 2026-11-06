@@ -36,9 +36,11 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
 - **R2 bucket**: leave **Create new** with the name `nimbox-mail`. This is where your mail is stored.
 - **Location hint**: leave as is.
 - **BREVO_API_KEY**: paste the key from step 1.
-- **Build command** and **Deploy command**: leave as they are.
+- **Build command** and **Deploy command**: already filled in with `npm run build` and `npm run deploy`. Leave them.
 - **Enable Preview builds**: turn it off. Your copy has no use for preview builds, and leaving it on only adds builds.
+- **Preview command**: leave as is. It only runs for preview builds, which you just turned off.
 - **Protect with Cloudflare Access**: turn it on. It puts a Cloudflare sign-in in front of your Worker; step 3 finishes the setup.
+- **Advanced settings**: leave as they are.
 
 Cloudflare then creates the Worker, the storage bucket and the database. When it finishes you get an address like `https://<project-name>.<your-account>.workers.dev`. It shows a setup page until the next step is done.
 
