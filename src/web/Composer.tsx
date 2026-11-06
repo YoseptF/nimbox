@@ -102,7 +102,7 @@ export function Composer(props: {
           <Icon name="close" size={16} />
         </button>
       </header>
-      {!props.brevo && <div className="banner error">Sending is not set up yet. Add the BREVO_API_KEY secret (see Settings).</div>}
+      {!props.brevo && <div className="banner error">Sending is not set up yet. Open Settings → Setup checklist to connect Brevo.</div>}
       <div className="field">
         <label>From</label>
         <span className="muted">{props.mailbox.displayName ? `${props.mailbox.displayName} <${props.mailbox.address}>` : props.mailbox.address}</span>

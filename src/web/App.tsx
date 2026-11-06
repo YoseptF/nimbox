@@ -36,6 +36,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [github, setGithub] = useState<GithubState | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
 
   const { folder, threadId } = route;
   const current = useMemo(() => mailboxes.find((m) => m.address === mailbox), [mailboxes, mailbox]);
@@ -56,11 +57,11 @@ export function App() {
     api
       .status()
       .then(async (s) => {
-        setStatus(s);
         if (s.authenticated) {
           await loadMailboxes();
           setGithub(await api.github().catch(() => null));
         }
+        setStatus(s);
       })
       .catch((e: Error) => setError(e.message));
   }, [loadMailboxes]);
@@ -171,11 +172,26 @@ export function App() {
 
   if (error && !status) return <div className="fatal">{error}</div>;
   if (!status) return <div className="fatal muted">Loading…</div>;
-  if (!status.authenticated) return <Setup status={status} />;
-
-  const githubPending = Boolean(github?.enabled && !github.skipped && !github.lapsed && !githubReady(github));
-  if (mailboxes.length === 0 || githubPending) {
-    return <Setup status={status} hasMailboxes={mailboxes.length > 0} github={github} onMailboxAdded={loadMailboxes} onGithub={setGithub} />;
+  if (!status.authenticated || mailboxes.length === 0 || !status.setupDone || setupOpen) {
+    return (
+      <>
+        {status.authenticated && <UpdateBanner github={github} onGithub={setGithub} />}
+        <Setup
+          status={status}
+          mailboxes={mailboxes}
+          github={github}
+          onMailboxes={loadMailboxes}
+          onStatus={() => api.status().then(setStatus)}
+          onGithub={setGithub}
+          onDone={async () => {
+            await api.finishSetup();
+            if (github?.enabled && !githubReady(github) && !github.skipped) setGithub(await api.skipGithub());
+            setStatus({ ...status, setupDone: true });
+            setSetupOpen(false);
+          }}
+        />
+      </>
+    );
   }
 
   return (
@@ -247,6 +263,10 @@ export function App() {
             onGithub={setGithub}
             onClose={() => setSettingsOpen(false)}
             onSaved={loadMailboxes}
+            onOpenSetup={() => {
+              setSettingsOpen(false);
+              setSetupOpen(true);
+            }}
           />
         )}
       </div>
