@@ -42,3 +42,65 @@ export async function sendWithBrevo(apiKey: string, mail: Omit<OutgoingMail, "me
   const id = payload.messageId.trim();
   return id.startsWith("<") ? id : `<${id}>`;
 }
+
+export interface DnsRecord {
+  type: string;
+  name: string;
+  value: string;
+  ok: boolean;
+}
+
+export interface BrevoDomain {
+  domain: string;
+  state: "verified" | "pending" | "unknown" | "badkey";
+  records: DnsRecord[];
+}
+
+interface BrevoRecord {
+  type?: string;
+  value?: string;
+  host_name?: string;
+  status?: boolean;
+}
+
+async function brevo(apiKey: string, path: string, init: RequestInit = {}) {
+  return fetch(`https://api.brevo.com/v3${path}`, {
+    ...init,
+    headers: { "api-key": apiKey, accept: "application/json", "content-type": "application/json" },
+  });
+}
+
+function recordName(host: string | undefined, domain: string) {
+  let name = (host ?? "").trim().replace(/\.$/, "");
+  if (name.endsWith(`.${domain}`)) name = name.slice(0, -domain.length - 1);
+  if (name === domain || name === "") name = "@";
+  return name;
+}
+
+function toDomain(domain: string, data: { verified?: boolean; authenticated?: boolean; dns_records?: Record<string, BrevoRecord> }): BrevoDomain {
+  const records = Object.values(data.dns_records ?? {})
+    .filter((r) => r && r.value)
+    .map((r) => ({ type: r.type ?? "TXT", name: recordName(r.host_name, domain), value: String(r.value), ok: Boolean(r.status) }));
+  return { domain, state: data.verified && data.authenticated ? "verified" : "pending", records };
+}
+
+export async function brevoDomain(apiKey: string, domain: string, recheck = false): Promise<BrevoDomain> {
+  const path = `/senders/domains/${encodeURIComponent(domain)}`;
+  if (recheck) await brevo(apiKey, `${path}/authenticate`, { method: "PUT" }).catch(() => null);
+  let response = await brevo(apiKey, path);
+  if (response.status === 404) {
+    const created = await brevo(apiKey, "/senders/domains", { method: "POST", body: JSON.stringify({ name: domain }) });
+    if (created.ok) response = await brevo(apiKey, path);
+  }
+  if (response.status === 401) return { domain, state: "badkey", records: [] };
+  if (!response.ok) return { domain, state: "unknown", records: [] };
+  return toDomain(domain, await response.json());
+}
+
+export function plainBrevoError(error: unknown) {
+  if (error instanceof BrevoError) {
+    if (error.status === 401) return "Brevo did not accept the key. Create a new key in Brevo and paste it again.";
+    return `Brevo said: ${error.message}`;
+  }
+  return "Could not reach Brevo. Try again in a minute.";
+}
