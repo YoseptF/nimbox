@@ -5,8 +5,8 @@
   "scripts": {
     "build": "vite build",
     "deploy": "wrangler deploy",
-    "dev": "vite build && wrangler dev",
-    "typecheck": "tsc --noEmit",
+    "dev": "vite build && wrangler dev --port 8799",
+    "typecheck": "tsc -p . && tsc -p src/worker && tsc -p test",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,5 +24,21 @@
     "vite": "^8.3.6",
     "vitest": "^4.1.12",
     "wrangler": "^4.158.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BREVO_API_KEY": {
+        "description": "Your Brevo API key, from **Brevo → SMTP & API → API Keys**. Your domain must be verified in Brevo first (see the README)."
+      },
+      "MAIL": {
+        "description": "Holds the original copy of every email and attachment."
+      },
+      "MAILBOX": {
+        "description": "Keeps the list of conversations for each address."
+      },
+      "DIRECTORY": {
+        "description": "Keeps the list of your addresses."
+      }
+    }
   }
 }
