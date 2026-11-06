@@ -10,6 +10,9 @@ function mockBrevo(handler: (url: URL, init?: RequestInit) => Response | undefin
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(href);
+    if (url.hostname === "cloudflare-dns.com") {
+      return Response.json({ Answer: [{ type: 15, data: "1 aspmx.l.google.com." }] });
+    }
     if (url.hostname === "api.brevo.com") {
       calls.push({
         method: init?.method ?? "GET",
@@ -78,7 +81,7 @@ describe("setup", () => {
 
     const setup = await (await call("/api/setup")).json();
     expect(setup).toMatchObject({
-      brevo: { connected: true, fromDeploy: false },
+      brevo: { connected: true, fromDeploy: false, sendVerified: false },
       received: false,
       domains: [
         {
@@ -96,7 +99,12 @@ describe("setup", () => {
 
     const test = await call("/api/setup/test-email", { method: "POST", body: JSON.stringify({ mailbox: "hi@setup.example" }) });
     expect(test.status).toBe(200);
-    expect(calls.find((c) => c.path === "/v3/smtp/email")?.body).toMatchObject({ sender: { email: "hi@setup.example" }, to: [{ email: "hi@setup.example" }] });
+    expect(await test.clone().json()).toEqual({ ok: true, to: "dev@example.com", provider: "gmail" });
+    expect(await (await call("/api/setup")).json()).toMatchObject({ brevo: { sendVerified: true } });
+    expect(calls.find((c) => c.path === "/v3/smtp/email")?.body).toMatchObject({ sender: { email: "hi@setup.example" }, to: [{ email: "dev@example.com" }] });
+
+    await call("/api/setup/brevo-key", { method: "POST", body: JSON.stringify({ key: `${key}x` }) });
+    expect(await (await call("/api/setup")).json()).toMatchObject({ brevo: { sendVerified: false } });
 
     await call("/api/setup/done", { method: "POST", body: "{}" });
     expect(await (await call("/api/status")).json()).toMatchObject({ setupDone: true });

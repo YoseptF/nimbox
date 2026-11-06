@@ -18,7 +18,7 @@ export interface SetupDomain {
 }
 
 export interface SetupState {
-  brevo: { connected: boolean; fromDeploy: boolean };
+  brevo: { connected: boolean; fromDeploy: boolean; sendVerified: boolean };
   domains: SetupDomain[];
   received: boolean;
 }

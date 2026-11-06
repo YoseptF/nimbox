@@ -1,3 +1,4 @@
+import type { MailProvider } from "./mailLinks";
 import type { Body, DeviceCode, SetupDomain, SetupState, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
 
 export class ApiError extends Error {
@@ -24,7 +25,8 @@ export const api = {
   setup: () => request<SetupState>("/api/setup"),
   saveBrevoKey: (key: string) => request<{ ok: true }>("/api/setup/brevo-key", { method: "POST", body: JSON.stringify({ key }) }),
   checkDomain: (domain: string) => request<SetupDomain>("/api/setup/check-domain", { method: "POST", body: JSON.stringify({ domain }) }),
-  testEmail: (mailbox: string) => request<{ ok: true }>("/api/setup/test-email", { method: "POST", body: JSON.stringify({ mailbox }) }),
+  testEmail: (mailbox: string) =>
+    request<{ ok: true; to: string; provider: MailProvider | null }>("/api/setup/test-email", { method: "POST", body: JSON.stringify({ mailbox }) }),
   finishSetup: () => request<{ ok: true }>("/api/setup/done", { method: "POST", body: "{}" }),
   github: () => request<GithubState>("/api/github"),
   connectGithub: () => request<DeviceCode>("/api/github/connect", { method: "POST", body: "{}" }),

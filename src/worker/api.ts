@@ -6,6 +6,7 @@ import { rawKey } from "./email";
 import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
 import { newId } from "./ids";
+import { detectProvider } from "./provider";
 import { buildEml, textToHtml, type OutgoingAttachment } from "./mime";
 import type { Folder, MessageRow, Person } from "./types";
 import type { UpdaterAction, UpdaterResult } from "./updater";
@@ -197,6 +198,7 @@ async function send(env: AppEnv, mailbox: string, input: SendRequest) {
   let messageId: string;
   try {
     messageId = await sendWithBrevo(apiKey, mail);
+    await directoryStub(env).setSetting("sendVerified", "1");
   } catch (error) {
     if (error instanceof BrevoError) throw new HttpError(502, plainBrevoError(error));
     throw error;
@@ -244,7 +246,7 @@ function domainsOf(addresses: string[]) {
   return [...new Set(addresses.map((a) => a.slice(a.indexOf("@") + 1)))];
 }
 
-async function setupRoute(request: Request, env: AppEnv, path: string, method: string): Promise<Response | null> {
+async function setupRoute(request: Request, env: AppEnv, path: string, method: string, userEmail: string): Promise<Response | null> {
   const directory = directoryStub(env);
   if (path === "/api/setup" && method === "GET") {
     const addresses = await directory.list();
@@ -252,7 +254,11 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const domains = apiKey ? await Promise.all(domainsOf(addresses).map((d) => brevoDomain(apiKey, d).catch(() => ({ domain: d, state: "unknown" as const, records: [] })))) : [];
     const incoming = await Promise.all(addresses.map((a) => mailboxStub(env, a).hasIncoming()));
     return json({
-      brevo: { connected: Boolean(apiKey), fromDeploy: Boolean(apiKey) && apiKey === env.BREVO_API_KEY?.trim() },
+      brevo: {
+        connected: Boolean(apiKey),
+        fromDeploy: Boolean(apiKey) && apiKey === env.BREVO_API_KEY?.trim(),
+        sendVerified: Boolean(apiKey) && (await directory.getSetting("sendVerified")) === "1",
+      },
       domains,
       received: incoming.some(Boolean),
     });
@@ -261,6 +267,7 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const key = ((await readJson<{ key?: string }>(request)).key ?? "").trim();
     if (key.length < 20 || /\s/.test(key)) throw new HttpError(400, "That doesn't look like a Brevo key. Copy the whole key and paste it again.");
     await directory.setSetting("brevoKey", key);
+    await directory.setSetting("sendVerified", null);
     return json({ ok: true });
   }
   if (path === "/api/setup/check-domain" && method === "POST") {
@@ -274,15 +281,28 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     const mailbox = await requireMailbox(env, (await readJson<{ mailbox?: string }>(request)).mailbox ?? "");
     const apiKey = await brevoKey(env);
     if (!apiKey) throw new HttpError(409, "Add your Brevo key first");
+    if (!ADDRESS.test(userEmail)) throw new HttpError(409, "nimbox could not find the email you signed in with, so it has nowhere to send the test.");
     const settings = await mailboxStub(env, mailbox).getSettings();
-    const me = { name: settings.displayName, address: mailbox };
-    const text = "This is a test from nimbox. If you can read this in your nimbox inbox, sending and receiving both work.";
+    const from = { name: settings.displayName, address: mailbox };
+    const text = `This is a test from nimbox. It was sent from ${mailbox}, so sending works.`;
     try {
-      await sendWithBrevo(apiKey, { from: me, to: [me], cc: [], bcc: [], subject: "nimbox test", text, html: textToHtml(text), inReplyTo: null, references: [], attachments: [] });
+      await sendWithBrevo(apiKey, {
+        from,
+        to: [{ name: "", address: userEmail }],
+        cc: [],
+        bcc: [],
+        subject: "nimbox test",
+        text,
+        html: textToHtml(text),
+        inReplyTo: null,
+        references: [],
+        attachments: [],
+      });
     } catch (error) {
       throw new HttpError(502, plainBrevoError(error));
     }
-    return json({ ok: true });
+    await directory.setSetting("sendVerified", "1");
+    return json({ ok: true, to: userEmail, provider: await detectProvider(userEmail) });
   }
   if (path === "/api/setup/done" && method === "POST") {
     await directory.setSetting("setupDone", "1");
@@ -308,11 +328,11 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
     });
   }
 
-  const user = await authenticate(request, env, ctx);
+  const user = await authenticate(request, env, ctx, path === "/api/setup/test-email");
   if (!user) throw new HttpError(401, "Sign in first");
   checkMutation(request);
 
-  const setup = await setupRoute(request, env, path, method);
+  const setup = await setupRoute(request, env, path, method, user.email);
   if (setup) return setup;
 
   const updates = updateRoutes[`${method} ${path}`];

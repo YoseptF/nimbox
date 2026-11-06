@@ -31,14 +31,19 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
   - **Session duration**: leave the default.
 - **Advanced settings**: leave as they are.
 
-When it finishes you get an address like `https://<project-name>.<your-account>.workers.dev`.
+When it finishes, your nimbox has its own address, like `https://<project-name>.<your-account-subdomain>.workers.dev`. To find it:
+
+- In the Cloudflare dashboard, open **Workers & Pages**, click your project, and open the **Domains** tab. Or:
+- Scroll to the last lines of the build log on the Deploy page; the address is printed there.
+
+Bookmark it: this is the link to your inbox.
 
 ### 2. Follow the setup page
 
 Open that address and sign in. nimbox shows a short checklist and walks you through the rest, with links that open the right page and values you can copy:
 
 - **Your email address**: type the address you want to use.
-- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email.
+- **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then lists the DNS records Brevo needs for your domain, with a **Check again** button, and lets you send yourself a test email. If your key can't read domains, nimbox links straight to [your domains in Brevo](https://app.brevo.com/senders/domain/list) instead. The step turns Done once Brevo confirms your domain or a test email goes out.
 - **Receiving**: one routing rule in Cloudflare's Email Routing. nimbox shows the exact address and Worker name to pick. Turning Email Routing on makes Cloudflare take over your domain's incoming mail, so it stops going to any previous forwarding service (ImprovMX, for example).
 - **One-click updates** (optional): connect GitHub so nimbox can update itself. See [Updating](#updating).
 
@@ -51,7 +56,7 @@ On [Brevo's API keys page](https://app.brevo.com/settings/keys/api), click **Gen
 - **Key name**: anything, for example `nimbox`.
 - **Expiry**: pick the longest option.
 - **Access**: **Restricted**.
-- **Permissions**: set **Transactional email** to **All** (Read is not enough to send). Leave everything else on **None**.
+- **Permissions**: set **Transactional email** to **All** (Read is not enough to send) and **Account** to **Read**, so nimbox can see when your domain is ready. Leave everything else on **None**.
 
 Brevo turns off a key that goes 90 days without being used. If that happens, nimbox's setup page says the key was not accepted and lets you paste a new one.
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { GithubConnect, githubReady } from "./GithubConnect";
+import { mailLink } from "./mailLinks";
 import type { GithubState, MailboxInfo, SetupState, Status } from "./types";
 
 const CF_WORKERS = "https://dash.cloudflare.com/?to=/:account/workers-and-pages";
@@ -8,6 +9,7 @@ const CF_EMAIL_ROUTING = "https://dash.cloudflare.com/?to=/:account/email-servic
 const CF_DNS = "https://dash.cloudflare.com/?to=/:account/:zone/dns/records";
 const BREVO_SIGNUP = "https://www.brevo.com";
 const BREVO_KEYS = "https://app.brevo.com/settings/keys/api";
+const BREVO_DOMAINS = "https://app.brevo.com/senders/domain/list";
 
 export function workerName() {
   const host = location.hostname;
@@ -157,7 +159,7 @@ export function Setup(props: {
 }) {
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [checking, setChecking] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string; link?: { label: string; href: string } | null } | null>(null);
 
   const load = async () => {
     setChecking(true);
@@ -178,7 +180,9 @@ export function Setup(props: {
   const local = address.split("@")[0];
   const domain = address.split("@")[1] ?? "";
   const name = workerName();
-  const sendingReady = Boolean(setup?.brevo.connected && setup.domains.length > 0 && setup.domains.every((d) => d.state === "verified"));
+  const sendingReady = Boolean(
+    setup?.brevo.connected && (setup.brevo.sendVerified || (setup.domains.length > 0 && setup.domains.every((d) => d.state === "verified"))),
+  );
 
   const checkDomain = async (d: string) => {
     setChecking(true);
@@ -193,8 +197,9 @@ export function Setup(props: {
   const sendTest = async () => {
     setTestResult(null);
     try {
-      await api.testEmail(address);
-      setTestResult({ ok: true, text: `Sent to ${address}. If receiving is set up, it shows up in your inbox in a few seconds.` });
+      const sent = await api.testEmail(address);
+      setTestResult({ ok: true, text: `Sent. Check ${sent.to} for an email from ${address}.`, link: mailLink(sent.provider, sent.to, address) });
+      setSetup((current) => (current ? { ...current, brevo: { ...current.brevo, sendVerified: true } } : current));
       setTimeout(load, 8000);
     } catch (e) {
       setTestResult({ ok: false, text: (e as Error).message });
@@ -215,13 +220,17 @@ export function Setup(props: {
 
       <Card n={2} done={props.mailboxes.length > 0} title="Your email address">
         {props.mailboxes.length > 0 ? (
-          <p>
-            Your address is <b>{address}</b>
-            {props.mailboxes.length > 1 ? ` (and ${props.mailboxes.length - 1} more)` : ""}.
-          </p>
+          <>
+            <p>
+              Your address is <b>{address}</b>
+              {props.mailboxes.length > 1 ? ` (and ${props.mailboxes.length - 1} more)` : ""}.
+            </p>
+            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
+          </>
         ) : (
           <>
             <p>Which address on your domain do you want to use?</p>
+            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
             <AddMailbox onAdded={props.onMailboxes} label="Use this address" />
           </>
         )}
@@ -239,7 +248,8 @@ export function Setup(props: {
               </li>
               <li>
                 <OpenLink href={BREVO_KEYS}>Open Brevo's API keys page</OpenLink> and click <b>Generate new API Key</b>. Choose <b>Restricted</b>, set{" "}
-                <b>Transactional email</b> to <b>All</b>, leave the rest on <b>None</b>, and pick the longest expiry.
+                <b>Transactional email</b> to <b>All</b> and <b>Account</b> to <b>Read</b> (so nimbox can see when your domain is ready), leave the rest
+                on <b>None</b>, and pick the longest expiry.
               </li>
               <li>Copy the key and paste it here:</li>
             </ol>
@@ -251,7 +261,7 @@ export function Setup(props: {
             {setup.domains.some((d) => d.state === "badkey") && (
               <div className="banner error">
                 Brevo did not accept the saved key. Create a new key on <OpenLink href={BREVO_KEYS}>Brevo's API keys page</OpenLink> (Restricted,
-                Transactional email set to All) and paste it here:
+                Transactional email set to All, Account set to Read) and paste it here:
                 <BrevoKeyForm onSaved={load} />
               </div>
             )}
@@ -293,19 +303,31 @@ export function Setup(props: {
                   </button>
                   <p className="muted small">New records can take a few minutes to show up.</p>
                 </div>
+              ) : setup.brevo.sendVerified ? (
+                <p key={d.domain}>
+                  Sending from <b>{d.domain}</b> works: Brevo accepted your email.
+                </p>
               ) : (
                 <div key={d.domain}>
                   <p>
-                    In <OpenLink href="https://app.brevo.com">Brevo</OpenLink>, open <b>Senders, Domains &amp; Dedicated IPs → Domains</b>, add <b>{d.domain}</b>,
+                    <OpenLink href={BREVO_DOMAINS}>Open your domains in Brevo</OpenLink>, add <b>{d.domain}</b>,
                     and follow Brevo's steps to confirm it. Then come back and send a test email.
                   </p>
                 </div>
               ),
             )}
-            {address && !setup.domains.some((d) => d.state === "badkey") && (
+            {address && props.status.email && !setup.domains.some((d) => d.state === "badkey") && (
               <div className="row test">
-                <button onClick={sendTest}>Send me a test email</button>
+                <span className="small">
+                  We'll send a test from <b>{address}</b> to <b>{props.status.email}</b>.
+                </span>
+                <button onClick={sendTest}>Send test email</button>
                 {testResult && <span className={testResult.ok ? "small" : "error-text small"}>{testResult.text}</span>}
+                {testResult?.link && (
+                  <a className="primary button-link" href={testResult.link.href} target="_blank" rel="noopener">
+                    {testResult.link.label}
+                  </a>
+                )}
               </div>
             )}
           </>
