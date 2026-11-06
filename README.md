@@ -40,7 +40,7 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
 - **Enable Preview builds**: turn it off. Your copy has no use for preview builds, and leaving it on only adds builds.
 - **Preview command**: leave as is. It only runs for preview builds, which you just turned off.
 - **Protect with Cloudflare Access**: turn it on. It puts a Cloudflare sign-in in front of your Worker; step 3 finishes the setup. Two more settings appear:
-  - **Scope**: pick **All traffic**. The default, **Previews only**, leaves your inbox open to anyone.
+  - **Scope**: pick **All traffic**. With the default, **Previews only**, your inbox gets no sign-in page and nimbox refuses to open it.
   - **Authentication policy**: open **Add policy** and add one that allows only your own email address.
 - **Advanced settings**: leave as they are.
 
