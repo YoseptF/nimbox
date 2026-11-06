@@ -1,14 +1,15 @@
 {
   "name": "nimbox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/embed-assets.mjs",
     "deploy": "wrangler deploy",
-    "dev": "vite build && wrangler dev --port 8799",
+    "dev": "npm run build && wrangler dev --port 8799",
     "typecheck": "tsc -p . && tsc -p src/worker && tsc -p test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pretest": "npm run build"
   },
   "dependencies": {
     "jose": "^6.2.15",
@@ -29,7 +30,7 @@
   "cloudflare": {
     "bindings": {
       "BREVO_API_KEY": {
-        "description": "Your Brevo API key, from **Brevo → SMTP & API → API Keys**. Create it as **Restricted** with **Transactional email** set to **All**. Your domain must be verified in Brevo first (see the README)."
+        "description": "Optional. Your Brevo key from **Brevo → SMTP & API → API Keys**, created as **Restricted** with **Transactional email** set to **All**. You can also leave this empty and paste the key on nimbox's setup page."
       },
       "MAIL": {
         "description": "Holds the original copy of every email and attachment."

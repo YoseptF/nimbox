@@ -1,4 +1,4 @@
-import type { Body, DeviceCode, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
+import type { Body, DeviceCode, SetupDomain, SetupState, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -21,6 +21,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const box = (address: string) => `/api/mailboxes/${encodeURIComponent(address)}`;
 
 export const api = {
+  setup: () => request<SetupState>("/api/setup"),
+  saveBrevoKey: (key: string) => request<{ ok: true }>("/api/setup/brevo-key", { method: "POST", body: JSON.stringify({ key }) }),
+  checkDomain: (domain: string) => request<SetupDomain>("/api/setup/check-domain", { method: "POST", body: JSON.stringify({ domain }) }),
+  testEmail: (mailbox: string) => request<{ ok: true }>("/api/setup/test-email", { method: "POST", body: JSON.stringify({ mailbox }) }),
+  finishSetup: () => request<{ ok: true }>("/api/setup/done", { method: "POST", body: "{}" }),
   github: () => request<GithubState>("/api/github"),
   connectGithub: () => request<DeviceCode>("/api/github/connect", { method: "POST", body: "{}" }),
   pollGithub: () =>

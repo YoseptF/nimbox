@@ -1,7 +1,7 @@
 import PostalMime from "postal-mime";
 import type { Email } from "postal-mime";
-import { accessConfigured, authenticate, devBypass } from "./auth";
-import { BrevoError, sendWithBrevo } from "./brevo";
+import { authenticate } from "./auth";
+import { brevoDomain, BrevoError, plainBrevoError, sendWithBrevo } from "./brevo";
 import { rawKey } from "./email";
 import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
@@ -156,8 +156,14 @@ interface SendRequest {
   attachments?: OutgoingAttachment[];
 }
 
+async function brevoKey(env: AppEnv) {
+  const pasted = await directoryStub(env).getSetting("brevoKey");
+  return pasted || env.BREVO_API_KEY?.trim() || "";
+}
+
 async function send(env: AppEnv, mailbox: string, input: SendRequest) {
-  if (!env.BREVO_API_KEY) throw new HttpError(503, "Sending is not set up yet: add the BREVO_API_KEY secret");
+  const apiKey = await brevoKey(env);
+  if (!apiKey) throw new HttpError(503, "Sending is not set up yet. Add your Brevo key on the setup page.");
   const to = people(input.to);
   const cc = people(input.cc);
   const bcc = people(input.bcc);
@@ -190,9 +196,9 @@ async function send(env: AppEnv, mailbox: string, input: SendRequest) {
 
   let messageId: string;
   try {
-    messageId = await sendWithBrevo(env.BREVO_API_KEY, mail);
+    messageId = await sendWithBrevo(apiKey, mail);
   } catch (error) {
-    if (error instanceof BrevoError) throw new HttpError(502, `Brevo refused the message: ${error.message}`);
+    if (error instanceof BrevoError) throw new HttpError(502, plainBrevoError(error));
     throw error;
   }
 
@@ -234,27 +240,80 @@ const updateRoutes: Record<string, UpdaterAction> = {
   "DELETE /api/github": "disconnect",
 };
 
-async function route(request: Request, env: AppEnv, url: URL): Promise<Response> {
+function domainsOf(addresses: string[]) {
+  return [...new Set(addresses.map((a) => a.slice(a.indexOf("@") + 1)))];
+}
+
+async function setupRoute(request: Request, env: AppEnv, path: string, method: string): Promise<Response | null> {
+  const directory = directoryStub(env);
+  if (path === "/api/setup" && method === "GET") {
+    const addresses = await directory.list();
+    const apiKey = await brevoKey(env);
+    const domains = apiKey ? await Promise.all(domainsOf(addresses).map((d) => brevoDomain(apiKey, d).catch(() => ({ domain: d, state: "unknown" as const, records: [] })))) : [];
+    const incoming = await Promise.all(addresses.map((a) => mailboxStub(env, a).hasIncoming()));
+    return json({
+      brevo: { connected: Boolean(apiKey), fromDeploy: Boolean(apiKey) && apiKey === env.BREVO_API_KEY?.trim() },
+      domains,
+      received: incoming.some(Boolean),
+    });
+  }
+  if (path === "/api/setup/brevo-key" && method === "POST") {
+    const key = ((await readJson<{ key?: string }>(request)).key ?? "").trim();
+    if (key.length < 20 || /\s/.test(key)) throw new HttpError(400, "That doesn't look like a Brevo key. Copy the whole key and paste it again.");
+    await directory.setSetting("brevoKey", key);
+    return json({ ok: true });
+  }
+  if (path === "/api/setup/check-domain" && method === "POST") {
+    const domain = ((await readJson<{ domain?: string }>(request)).domain ?? "").trim().toLowerCase();
+    const apiKey = await brevoKey(env);
+    if (!apiKey) throw new HttpError(409, "Add your Brevo key first");
+    if (!domainsOf(await directory.list()).includes(domain)) throw new HttpError(404, "Unknown domain");
+    return json(await brevoDomain(apiKey, domain, true));
+  }
+  if (path === "/api/setup/test-email" && method === "POST") {
+    const mailbox = await requireMailbox(env, (await readJson<{ mailbox?: string }>(request)).mailbox ?? "");
+    const apiKey = await brevoKey(env);
+    if (!apiKey) throw new HttpError(409, "Add your Brevo key first");
+    const settings = await mailboxStub(env, mailbox).getSettings();
+    const me = { name: settings.displayName, address: mailbox };
+    const text = "This is a test from nimbox. If you can read this in your nimbox inbox, sending and receiving both work.";
+    try {
+      await sendWithBrevo(apiKey, { from: me, to: [me], cc: [], bcc: [], subject: "nimbox test", text, html: textToHtml(text), inReplyTo: null, references: [], attachments: [] });
+    } catch (error) {
+      throw new HttpError(502, plainBrevoError(error));
+    }
+    return json({ ok: true });
+  }
+  if (path === "/api/setup/done" && method === "POST") {
+    await directory.setSetting("setupDone", "1");
+    return json({ ok: true });
+  }
+  return null;
+}
+
+async function route(request: Request, env: AppEnv, ctx: ExecutionContext | undefined, url: URL): Promise<Response> {
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
 
   if (path === "/api/status" && method === "GET") {
-    const user = await authenticate(request, env);
+    const user = await authenticate(request, env, ctx, true);
+    if (!user) return json({ authenticated: false, email: null, version: VERSION, brevo: false, setupDone: false });
+    const directory = directoryStub(env);
     return json({
-      access: accessConfigured(env) || devBypass(request, env),
-      brevo: Boolean(env.BREVO_API_KEY),
-      authenticated: Boolean(user),
-      email: user?.email ?? null,
+      authenticated: true,
+      email: user.email || null,
       version: VERSION,
+      brevo: Boolean(await brevoKey(env)),
+      setupDone: (await directory.getSetting("setupDone")) === "1",
     });
   }
 
-  const user = await authenticate(request, env);
-  if (!user) {
-    if (!accessConfigured(env)) throw new HttpError(503, "Cloudflare Access is not set up yet");
-    throw new HttpError(401, "Sign in through Cloudflare Access");
-  }
+  const user = await authenticate(request, env, ctx);
+  if (!user) throw new HttpError(401, "Sign in first");
   checkMutation(request);
+
+  const setup = await setupRoute(request, env, path, method);
+  if (setup) return setup;
 
   const updates = updateRoutes[`${method} ${path}`];
   if (updates) {
@@ -363,9 +422,9 @@ async function route(request: Request, env: AppEnv, url: URL): Promise<Response>
   throw new HttpError(404, "Not found");
 }
 
-export async function handleApi(request: Request, env: AppEnv) {
+export async function handleApi(request: Request, env: AppEnv, ctx?: ExecutionContext) {
   try {
-    return await route(request, env, new URL(request.url));
+    return await route(request, env, ctx, new URL(request.url));
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status);
     console.error(error);

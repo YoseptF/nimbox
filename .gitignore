@@ -4,3 +4,4 @@ node_modules/
 .dev.vars
 dist/
 nimbox-**.pem
+src/worker/assets.generated.js

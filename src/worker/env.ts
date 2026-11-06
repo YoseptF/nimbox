@@ -4,7 +4,6 @@ import type { Updater } from "./updater";
 
 export interface AppEnv {
   MAIL: R2Bucket;
-  ASSETS: Fetcher;
   MAILBOX: DurableObjectNamespace<Mailbox>;
   DIRECTORY: DurableObjectNamespace<Directory>;
   UPDATER: DurableObjectNamespace<Updater>;
