@@ -39,6 +39,7 @@ export interface ThreadRow {
   participants: Person[];
   snippet: string;
   hasAttachments: boolean;
+  lastMessageId: string;
 }
 
 export type Folder = "inbox" | "sent" | "all";

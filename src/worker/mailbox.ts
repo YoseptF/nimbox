@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS threads (
   has_out INTEGER NOT NULL,
   participants TEXT NOT NULL,
   snippet TEXT NOT NULL,
-  has_attachments INTEGER NOT NULL
+  has_attachments INTEGER NOT NULL,
+  last_message_id TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS threads_date ON threads(last_date);
 CREATE TABLE IF NOT EXISTS settings (
@@ -82,6 +83,7 @@ function toThread(row: Row): ThreadRow {
     participants: JSON.parse(row.participants as string),
     snippet: row.snippet as string,
     hasAttachments: row.has_attachments === 1,
+    lastMessageId: row.last_message_id as string,
   };
 }
 
@@ -164,8 +166,8 @@ export class Mailbox extends DurableObject<AppEnv> {
       if (!participants.some((p) => p.address === row.from.address)) participants.push(row.from);
     }
     this.sql.exec(
-      `INSERT OR REPLACE INTO threads (id, subject, last_date, count, unread, has_in, has_out, participants, snippet, has_attachments)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO threads (id, subject, last_date, count, unread, has_in, has_out, participants, snippet, has_attachments, last_message_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       threadId,
       rows[0].subject,
       last.date,
@@ -176,6 +178,7 @@ export class Mailbox extends DurableObject<AppEnv> {
       JSON.stringify(participants),
       last.snippet,
       rows.some((r) => r.hasAttachments) ? 1 : 0,
+      last.id,
     );
   }
 
@@ -242,7 +245,7 @@ export class Mailbox extends DurableObject<AppEnv> {
   }
 
   unreadCount(): number {
-    const row = this.sql.exec("SELECT COALESCE(SUM(unread), 0) AS n FROM threads WHERE has_in = 1").one();
+    const row = this.sql.exec("SELECT COUNT(*) AS n FROM threads WHERE has_in = 1 AND unread > 0").one();
     return row.n as number;
   }
 
