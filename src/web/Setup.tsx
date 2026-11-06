@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { GithubConnect, githubReady } from "./GithubConnect";
+import { mailLink } from "./mailLinks";
 import type { GithubState, MailboxInfo, SetupState, Status } from "./types";
 
 const CF_WORKERS = "https://dash.cloudflare.com/?to=/:account/workers-and-pages";
@@ -158,7 +159,7 @@ export function Setup(props: {
 }) {
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [checking, setChecking] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string; link?: { label: string; href: string } | null } | null>(null);
 
   const load = async () => {
     setChecking(true);
@@ -196,8 +197,8 @@ export function Setup(props: {
   const sendTest = async () => {
     setTestResult(null);
     try {
-      await api.testEmail(address);
-      setTestResult({ ok: true, text: `Sent. Check ${props.status.email ?? "your inbox"} for an email from ${address}.` });
+      const sent = await api.testEmail(address);
+      setTestResult({ ok: true, text: `Sent. Check ${sent.to} for an email from ${address}.`, link: mailLink(sent.provider, sent.to, address) });
       setSetup((current) => (current ? { ...current, brevo: { ...current.brevo, sendVerified: true } } : current));
       setTimeout(load, 8000);
     } catch (e) {
@@ -322,6 +323,11 @@ export function Setup(props: {
                 </span>
                 <button onClick={sendTest}>Send test email</button>
                 {testResult && <span className={testResult.ok ? "small" : "error-text small"}>{testResult.text}</span>}
+                {testResult?.link && (
+                  <a className="primary button-link" href={testResult.link.href} target="_blank" rel="noopener">
+                    {testResult.link.label}
+                  </a>
+                )}
               </div>
             )}
           </>
