@@ -84,8 +84,8 @@ export function Setup({
         <Step done={status.brevo} title="Connect Brevo for sending">
           <p>
             In Brevo, add your domain under <b>Senders, Domains &amp; Dedicated IPs → Domains</b> and add the DNS records it shows (DKIM and DMARC) in
-            Cloudflare DNS. Create an API key under <b>SMTP &amp; API → API Keys</b> and save it in the Worker as the secret{" "}
-            <code>BREVO_API_KEY</code>.
+            Cloudflare DNS. Create an API key under <b>SMTP &amp; API → API Keys</b>: choose <b>Restricted</b> access, set <b>Transactional email</b> to{" "}
+            <b>All</b>, leave the rest on <b>None</b>, and pick the longest expiry. Save it in the Worker as the secret <code>BREVO_API_KEY</code>.
           </p>
         </Step>
         {status.authenticated && (
