@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Sending turns Done on the setup page as soon as a test email goes out, even when nimbox can't read your domain from Brevo.
+- The Brevo key instructions now add **Account** set to **Read**, so nimbox can see when your domain is ready.
+- The setup page links straight to your domains in Brevo.
+
 ## 0.3.0
 
 - A new setup page walks you through each step, with links that open the right page and values you can copy.
