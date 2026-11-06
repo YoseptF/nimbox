@@ -244,6 +244,10 @@ export class Mailbox extends DurableObject<AppEnv> {
     });
   }
 
+  hasIncoming(): boolean {
+    return this.sql.exec("SELECT 1 FROM threads WHERE has_in = 1 LIMIT 1").toArray().length > 0;
+  }
+
   unreadCount(): number {
     const row = this.sql.exec("SELECT COUNT(*) AS n FROM threads WHERE has_in = 1 AND unread > 0").one();
     return row.n as number;

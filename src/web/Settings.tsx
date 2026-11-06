@@ -80,6 +80,7 @@ export function Settings(props: {
   onGithub: (github: GithubState) => void;
   onClose: () => void;
   onSaved: () => void;
+  onOpenSetup: () => void;
 }) {
   return (
     <div className="overlay" onClick={props.onClose}>
@@ -93,7 +94,10 @@ export function Settings(props: {
         <section>
           <p className="small">
             Signed in as <b>{props.status.email || "unknown"}</b>. Sending through Brevo is{" "}
-            {props.status.brevo ? <b>connected</b> : <b className="error-text">not set up (add the BREVO_API_KEY secret)</b>}.
+            {props.status.brevo ? <b>connected</b> : <b className="error-text">not set up yet</b>}.{" "}
+            <button className="link" onClick={props.onOpenSetup}>
+              Open the setup checklist
+            </button>
           </p>
         </section>
         <Updates status={props.status} github={props.github} onGithub={props.onGithub} />

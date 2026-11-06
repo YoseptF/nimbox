@@ -57,6 +57,6 @@ export async function deliver(raw: string, from: string, to: string) {
 export async function api(path: string, init: RequestInit = {}, host = "http://localhost") {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json");
-  const response = await worker.fetch!(new Request(`${host}${path}`, { ...init, headers }) as never, appEnv);
+  const response = await worker.fetch!(new Request(`${host}${path}`, { ...init, headers }) as never, appEnv, {} as ExecutionContext);
   return response;
 }

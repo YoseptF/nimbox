@@ -8,6 +8,17 @@ export class Directory extends DurableObject<AppEnv> {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     this.sql.exec("CREATE TABLE IF NOT EXISTS mailboxes (address TEXT PRIMARY KEY, created_at INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+  }
+
+  getSetting(key: string): string | null {
+    const rows = this.sql.exec("SELECT value FROM settings WHERE key = ?", key).toArray();
+    return rows.length ? (rows[0].value as string) : null;
+  }
+
+  setSetting(key: string, value: string | null) {
+    if (value === null) this.sql.exec("DELETE FROM settings WHERE key = ?", key);
+    else this.sql.exec("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, value);
   }
 
   list(): string[] {

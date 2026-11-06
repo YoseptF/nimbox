@@ -4,11 +4,23 @@ export interface Person {
 }
 
 export interface Status {
-  access: boolean;
-  brevo: boolean;
   authenticated: boolean;
   email: string | null;
   version: string;
+  brevo: boolean;
+  setupDone: boolean;
+}
+
+export interface SetupDomain {
+  domain: string;
+  state: "verified" | "pending" | "unknown" | "badkey";
+  records: { type: string; name: string; value: string; ok: boolean }[];
+}
+
+export interface SetupState {
+  brevo: { connected: boolean; fromDeploy: boolean };
+  domains: SetupDomain[];
+  received: boolean;
 }
 
 export interface GithubState {
