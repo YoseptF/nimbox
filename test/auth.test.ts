@@ -9,8 +9,12 @@ afterEach(() => vi.restoreAllMocks());
 const TEAM = "https://acme.cloudflareaccess.com";
 const AUD = "test-aud";
 
-function call(env: AppEnv, path: string, headers: Record<string, string> = {}) {
-  return worker.fetch!(new Request(`https://nimbox.acme.workers.dev${path}`, { headers }) as never, env);
+function call(env: AppEnv, path: string, headers: Record<string, string> = {}, ctx?: Partial<ExecutionContext>) {
+  return worker.fetch!(new Request(`https://nimbox.acme.workers.dev${path}`, { headers }) as never, env, ctx as ExecutionContext);
+}
+
+function signedIn(email: string): Partial<ExecutionContext> {
+  return { access: { aud: "app-aud", getIdentity: async () => ({ email }) as never } } as Partial<ExecutionContext>;
 }
 
 const keyPair = generateKeyPair("RS256");
@@ -39,12 +43,12 @@ describe("access", () => {
 
   it("keeps the API closed when Access is not set up", async () => {
     const env = { ...appEnv, DEV_ACCESS_BYPASS: undefined } as AppEnv;
-    expect((await call(env, "/api/mailboxes")).status).toBe(503);
-    expect(await (await call(env, "/api/status")).json()).toMatchObject({ access: false, authenticated: false });
+    expect((await call(env, "/api/mailboxes")).status).toBe(401);
+    expect(await (await call(env, "/api/status")).json()).toMatchObject({ authenticated: false });
   });
 
   it("ignores the dev bypass outside localhost", async () => {
-    expect((await call(appEnv, "/api/mailboxes")).status).toBe(503);
+    expect((await call(appEnv, "/api/mailboxes")).status).toBe(401);
   });
 
   it("rejects requests without a valid Access token", async () => {
@@ -60,6 +64,19 @@ describe("access", () => {
     const response = await call(configured, "/api/mailboxes", { "cf-access-jwt-assertion": token });
     expect(response.status).toBe(200);
     const status = await (await call(configured, "/api/status", { "cf-access-jwt-assertion": token })).json();
-    expect(status).toMatchObject({ access: true, authenticated: true, email: "owner@example.com" });
+    expect(status).toMatchObject({ authenticated: true, email: "owner@example.com" });
+  });
+
+  it("trusts the sign-in Cloudflare Access hands to the Worker, with no settings to copy", async () => {
+    const env = { ...appEnv, DEV_ACCESS_BYPASS: undefined } as AppEnv;
+    expect((await call(env, "/api/mailboxes", {}, signedIn("owner@example.com"))).status).toBe(200);
+    const status = await (await call(env, "/api/status", {}, signedIn("owner@example.com"))).json();
+    expect(status).toMatchObject({ authenticated: true, email: "owner@example.com" });
+  });
+
+  it("ignores a forged token header when Access did not sign the request in", async () => {
+    const env = { ...appEnv, DEV_ACCESS_BYPASS: undefined } as AppEnv;
+    const forged = "eyJhbGciOiJub25lIn0.eyJhdWQiOiJ4IiwiZW1haWwiOiJ4QHgifQ.";
+    expect((await call(env, "/api/mailboxes", { "cf-access-jwt-assertion": forged })).status).toBe(401);
   });
 });
