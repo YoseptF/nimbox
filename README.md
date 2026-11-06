@@ -37,6 +37,8 @@ Click **Deploy to Cloudflare** above. Cloudflare copies this repository into you
 - **Location hint**: leave as is.
 - **BREVO_API_KEY**: paste the key from step 1.
 - **Build command** and **Deploy command**: leave as they are.
+- **Enable Preview builds**: turn it off. Your copy has no use for preview builds, and leaving it on only adds builds.
+- **Protect with Cloudflare Access**: turn it on. It puts a Cloudflare sign-in in front of your Worker; step 3 finishes the setup.
 
 Cloudflare then creates the Worker, the storage bucket and the database. When it finishes you get an address like `https://<project-name>.<your-account>.workers.dev`. It shows a setup page until the next step is done.
 
@@ -44,8 +46,10 @@ Cloudflare then creates the Worker, the storage bucket and the database. When it
 
 nimbox refuses to show any mail until Access is in place.
 
-1. In the Cloudflare dashboard open **Workers & Pages**, select your Worker (the project name you picked), open the **Access** tab and choose **Protect this Worker behind Access** with **All traffic**. As the policy, allow only your own email address.
-2. Open **Zero Trust → Access → Applications**, edit the new application and copy the **Application Audience (AUD) Tag**.
+1. In the Cloudflare dashboard open **Workers & Pages**, select your Worker (the project name you picked) and open the **Access** tab.
+   - If you turned on **Protect with Cloudflare Access** in step 2, the Worker is already protected. Check that its policy lets in only your own email address, and change it if not.
+   - Otherwise choose **Protect this Worker behind Access** with **All traffic**, and as the policy allow only your own email address.
+2. Open **Zero Trust → Access → Applications**, edit the application that protects your Worker and copy the **Application Audience (AUD) Tag**.
 3. Find your team name under **Zero Trust → Settings** (it looks like `yourteam.cloudflareaccess.com`).
 4. Back in the Worker, open **Settings → Variables and Secrets** and add two secrets:
    - `ACCESS_TEAM_DOMAIN` = `yourteam.cloudflareaccess.com`
@@ -107,7 +111,7 @@ echo "DEV_ACCESS_BYPASS=1" >> .dev.vars
 npm run dev
 ```
 
-`DEV_ACCESS_BYPASS` only works on `localhost`. To feed it a test email:
+`DEV_ACCESS_BYPASS` only works on `localhost`. To send real mail locally, put your Brevo key after `BREVO_API_KEY=` in `.dev.vars`. To feed it a test email:
 
 ```sh
 curl -X POST "http://localhost:8799/cdn-cgi/handler/email?from=ana@example.org&to=me@example.com" \
