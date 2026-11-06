@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import { Composer } from "./Composer";
+import { ReturnNotice, takeCloudflareReturn } from "./CloudflareUI";
 import { githubReady } from "./GithubConnect";
 import { UpdateBanner } from "./UpdateBanner";
 import { snippetOf } from "./format";
@@ -9,7 +10,7 @@ import { Setup } from "./Setup";
 import { Sidebar } from "./Sidebar";
 import { ThreadList } from "./ThreadList";
 import { ThreadView } from "./ThreadView";
-import type { Draft, Folder, GithubState, MailboxInfo, Status, Thread } from "./types";
+import type { CloudflareState, Draft, Folder, GithubState, MailboxInfo, Status, Thread } from "./types";
 
 function readHash(): { folder: Folder; threadId: string | null } {
   const [, folder, threadId] = location.hash.split("/");
@@ -25,6 +26,7 @@ function writeHash(folder: Folder, threadId: string | null) {
 export function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fatal, setFatal] = useState<string | null>(null);
   const [mailboxes, setMailboxes] = useState<MailboxInfo[]>([]);
   const [mailbox, setMailbox] = useState<string>(() => localStorage.getItem("nimbox.mailbox") ?? "");
   const [route, setRoute] = useState(readHash);
@@ -37,6 +39,8 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [github, setGithub] = useState<GithubState | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [cloudflare, setCloudflare] = useState<CloudflareState | null>(null);
+  const [notice, setNotice] = useState(takeCloudflareReturn);
 
   const { folder, threadId } = route;
   const current = useMemo(() => mailboxes.find((m) => m.address === mailbox), [mailboxes, mailbox]);
@@ -57,13 +61,14 @@ export function App() {
     api
       .status()
       .then(async (s) => {
+        setCloudflare(await api.cloudflare().catch(() => null));
         if (s.authenticated) {
           await loadMailboxes();
           setGithub(await api.github().catch(() => null));
         }
         setStatus(s);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => setFatal(e.message));
   }, [loadMailboxes]);
 
   useEffect(() => {
@@ -170,7 +175,7 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [threads, threadId, openThread, current]);
 
-  if (error && !status) return <div className="fatal">{error}</div>;
+  if (fatal && !status) return <div className="fatal">{fatal}</div>;
   if (!status) return <div className="fatal muted">Loading…</div>;
   if (!status.authenticated || mailboxes.length === 0 || !status.setupDone || setupOpen) {
     return (
@@ -178,6 +183,8 @@ export function App() {
         {status.authenticated && <UpdateBanner github={github} onGithub={setGithub} />}
         <Setup
           status={status}
+          cloudflare={cloudflare}
+          notice={notice}
           mailboxes={mailboxes}
           github={github}
           onMailboxes={loadMailboxes}
@@ -197,6 +204,11 @@ export function App() {
   return (
     <div className="shell">
       <UpdateBanner github={github} onGithub={setGithub} />
+      {notice && (
+        <div className="notice-bar" onClick={() => setNotice(null)}>
+          <ReturnNotice notice={notice} />
+        </div>
+      )}
       <div className={`app ${threadId ? "reading" : ""}`}>
         <Sidebar
           mailboxes={mailboxes}
@@ -261,6 +273,8 @@ export function App() {
             status={status}
             github={github}
             onGithub={setGithub}
+            cloudflare={cloudflare}
+            onCloudflare={setCloudflare}
             onClose={() => setSettingsOpen(false)}
             onSaved={loadMailboxes}
             onOpenSetup={() => {
