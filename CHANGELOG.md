@@ -6,6 +6,7 @@
 - The Brevo key instructions now add **Account** set to **Read**, so nimbox can see when your domain is ready.
 - The setup page links straight to your domains in Brevo.
 - The test email now goes from your nimbox address to the email you signed in with, so it works before receiving is set up.
+- After a test email, a button opens your Gmail, Outlook, Yahoo, iCloud or Proton inbox (the app on Android), with Gmail searching straight for the test.
 
 ## 0.3.0
 
