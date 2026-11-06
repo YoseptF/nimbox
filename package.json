@@ -1,5 +1,6 @@
 {
   "name": "nimbox",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -28,7 +29,7 @@
   "cloudflare": {
     "bindings": {
       "BREVO_API_KEY": {
-        "description": "Your Brevo API key, from **Brevo → SMTP & API → API Keys**. Your domain must be verified in Brevo first (see the README)."
+        "description": "Your Brevo API key, from **Brevo \u2192 SMTP & API \u2192 API Keys**. Your domain must be verified in Brevo first (see the README)."
       },
       "MAIL": {
         "description": "Holds the original copy of every email and attachment."
@@ -38,6 +39,9 @@
       },
       "DIRECTORY": {
         "description": "Keeps the list of your addresses."
+      },
+      "UPDATER": {
+        "description": "Keeps the GitHub connection used to install nimbox updates."
       }
     }
   }
