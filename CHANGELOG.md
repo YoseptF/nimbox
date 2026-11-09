@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- The Receiving step now updates as soon as you add your address, instead of staying empty until you reload the page.
+- If Cloudflare refuses to send a new address to nimbox, nimbox says so right away.
+
 ## 0.4.1
 
 - **Connect Cloudflare** is turned on.
