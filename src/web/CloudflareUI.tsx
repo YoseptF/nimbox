@@ -35,7 +35,7 @@ export function ConnectCloudflare({ label = "Connect Cloudflare" }: { label?: st
   );
 }
 
-export function TurnOnSignIn({ cloudflare }: { cloudflare: CloudflareState }) {
+export function TurnOnSignIn({ cloudflare, highlight = false }: { cloudflare: CloudflareState; highlight?: boolean }) {
   const [state, setState] = useState<"idle" | "working" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
   if (!cloudflare.connected) {
@@ -60,7 +60,7 @@ export function TurnOnSignIn({ cloudflare }: { cloudflare: CloudflareState }) {
     <div className="github-connect">
       <p>Cloudflare is connected. One click turns on the sign-in, so only people in your Cloudflare account can open nimbox.</p>
       <button
-        className="primary"
+        className={`primary ${highlight && state === "idle" ? "attention" : ""}`}
         disabled={state === "working"}
         onClick={async () => {
           setState("working");
