@@ -1,5 +1,5 @@
 import type { MailProvider } from "./mailLinks";
-import type { Body, DeviceCode, SetupDomain, SetupState, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
+import type { Body, CloudflareState, DeviceCode, ReceivingStatus, SessionState, SetupDomain, SetupState, Folder, GithubState, MailboxInfo, Message, Status, Thread, UpdateState } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -22,6 +22,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const box = (address: string) => `/api/mailboxes/${encodeURIComponent(address)}`;
 
 export const api = {
+  cloudflare: () => request<CloudflareState>("/api/cloudflare"),
+  protectWithCloudflare: () => request<{ ok: true }>("/api/cloudflare/protect", { method: "POST", body: "{}" }),
+  disconnectCloudflare: () => request<{ ok: true }>("/api/cloudflare", { method: "DELETE", body: "{}" }),
+  receiving: () => request<ReceivingStatus[]>("/api/cloudflare/receiving"),
+  setUpReceiving: (domain: string, approve: string[]) =>
+    request<ReceivingStatus>("/api/cloudflare/receiving", { method: "POST", body: JSON.stringify({ domain, approve }) }),
+  session: () => request<SessionState>("/api/cloudflare/session"),
+  setSession: (duration: string) => request<SessionState>("/api/cloudflare/session", { method: "PUT", body: JSON.stringify({ duration }) }),
+  uninstall: (confirm: string) => request<{ ok: true }>("/api/cloudflare/uninstall", { method: "POST", body: JSON.stringify({ confirm }) }),
+  writeBrevoRecords: (domain: string) => request<SetupDomain>("/api/setup/brevo-records", { method: "POST", body: JSON.stringify({ domain }) }),
+  removeMailbox: (address: string) => request<{ ok: true }>(`/api/mailboxes/${encodeURIComponent(address)}`, { method: "DELETE", body: "{}" }),
   setup: () => request<SetupState>("/api/setup"),
   saveBrevoKey: (key: string) => request<{ ok: true }>("/api/setup/brevo-key", { method: "POST", body: JSON.stringify({ key }) }),
   checkDomain: (domain: string) => request<SetupDomain>("/api/setup/check-domain", { method: "POST", body: JSON.stringify({ domain }) }),
@@ -43,9 +54,9 @@ export const api = {
     request<{ status: "updated" | "up-to-date"; version: string; commit?: string }>("/api/updates/apply", { method: "POST", body: "{}" }),
   status: () => request<Status>("/api/status"),
   mailboxes: () => request<MailboxInfo[]>("/api/mailboxes"),
-  addMailbox: (address: string) => request<{ address: string }>("/api/mailboxes", { method: "POST", body: JSON.stringify({ address }) }),
+  addMailbox: (address: string) => request<{ address: string; routed: boolean }>("/api/mailboxes", { method: "POST", body: JSON.stringify({ address }) }),
   updateMailbox: (address: string, settings: { displayName?: string; forwardTo?: string }) =>
-    request<MailboxInfo>(box(address), { method: "PATCH", body: JSON.stringify(settings) }),
+    request<MailboxInfo & { forwardStatus: "verified" | "sent" | "manual" | null }>(box(address), { method: "PATCH", body: JSON.stringify(settings) }),
   threads: (address: string, folder: Folder, options: { before?: number; q?: string } = {}) => {
     const params = new URLSearchParams({ folder });
     if (options.before) params.set("before", String(options.before));

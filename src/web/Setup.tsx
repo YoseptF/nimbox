@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import { GithubConnect, githubReady } from "./GithubConnect";
 import { mailLink } from "./mailLinks";
-import type { GithubState, MailboxInfo, SetupState, Status } from "./types";
+import { ConnectCloudflare, ReceivingPanel, receivingDone, ReturnNotice, TurnOnSignIn } from "./CloudflareUI";
+import type { CloudflareState, GithubState, MailboxInfo, ReceivingStatus, SetupState, Status } from "./types";
 
 const CF_WORKERS = "https://dash.cloudflare.com/?to=/:account/workers-and-pages";
 const CF_EMAIL_ROUTING = "https://dash.cloudflare.com/?to=/:account/email-service/routing";
@@ -116,8 +117,32 @@ export function BrevoKeyForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function SignInCard() {
+function ManualSignIn() {
   const name = workerName();
+  return (
+    <>
+      <ol className="howto">
+        <li>
+          <OpenLink href={CF_WORKERS}>Open Workers &amp; Pages in Cloudflare</OpenLink>
+        </li>
+        <li>Click {name ? <b>{name}</b> : "your nimbox app"}, then the <b>Access</b> tab.</li>
+        <li>
+          Choose <b>Protect this Worker behind Access</b>, pick <b>All traffic</b>, and as the policy pick <b>Cloudflare account</b>.
+        </li>
+      </ol>
+      <p className="muted small">
+        Turned on protection while deploying? Check that it says <b>All traffic</b>, not <b>Previews only</b>.
+      </p>
+      <button className="primary" onClick={() => location.reload()}>
+        Check again
+      </button>
+    </>
+  );
+}
+
+function SignInCard({ cloudflare, notice }: { cloudflare: CloudflareState | null; notice: { ok: boolean; text: string } | null }) {
+  const [manual, setManual] = useState(false);
+  const automatic = Boolean(cloudflare?.enabled);
   return (
     <div className="setup">
       <div className="setup-hero">
@@ -125,23 +150,19 @@ function SignInCard() {
         <h1>One step before your inbox</h1>
         <p>nimbox keeps your mail private by asking you to sign in first. That protection is not on yet, so nothing is shown.</p>
       </div>
+      <ReturnNotice notice={notice} />
       <section className="card">
         <div className="card-body solo">
-          <ol className="howto">
-            <li>
-              <OpenLink href={CF_WORKERS}>Open Workers &amp; Pages in Cloudflare</OpenLink>
-            </li>
-            <li>Click {name ? <b>{name}</b> : "your nimbox app"}, then the <b>Access</b> tab.</li>
-            <li>
-              Choose <b>Protect this Worker behind Access</b>, pick <b>All traffic</b>, and as the policy pick <b>Cloudflare account</b>.
-            </li>
-          </ol>
-          <p className="muted small">
-            Turned on protection while deploying? Check that it says <b>All traffic</b>, not <b>Previews only</b>.
-          </p>
-          <button className="primary" onClick={() => location.reload()}>
-            Check again
-          </button>
+          {automatic && !manual ? (
+            <>
+              <TurnOnSignIn cloudflare={cloudflare!} />
+              <button className="link small skip" onClick={() => setManual(true)}>
+                I'd rather do it in the Cloudflare dashboard
+              </button>
+            </>
+          ) : (
+            <ManualSignIn />
+          )}
         </div>
       </section>
     </div>
@@ -150,6 +171,8 @@ function SignInCard() {
 
 export function Setup(props: {
   status: Status;
+  cloudflare: CloudflareState | null;
+  notice: { ok: boolean; text: string } | null;
   mailboxes: MailboxInfo[];
   github: GithubState | null;
   onMailboxes: () => void;
@@ -174,7 +197,12 @@ export function Setup(props: {
     if (props.status.authenticated) load();
   }, [props.status.authenticated, props.mailboxes.length, props.status.brevo]);
 
-  if (!props.status.authenticated) return <SignInCard />;
+  const [receiving, setReceiving] = useState<ReceivingStatus[] | null>(null);
+  const [writing, setWriting] = useState<string | null>(null);
+  const [writeError, setWriteError] = useState<string | null>(null);
+
+  if (!props.status.authenticated) return <SignInCard cloudflare={props.cloudflare} notice={props.notice} />;
+  const connected = Boolean(props.cloudflare?.connected);
 
   const address = props.mailboxes[0]?.address ?? "";
   const local = address.split("@")[0];
@@ -214,12 +242,29 @@ export function Setup(props: {
         <h1>Set up nimbox</h1>
         <p>A few short steps and your inbox is ready. You can come back here anytime from Settings.</p>
       </div>
+      <ReturnNotice notice={props.notice} />
 
       <Card n={1} done title="Private sign-in">
         <p className="muted small">Only you can open nimbox{props.status.email ? ` (signed in as ${props.status.email})` : ""}.</p>
       </Card>
 
-      <Card n={2} done={props.mailboxes.length > 0} title="Your email address">
+      {props.cloudflare?.enabled && (
+        <Card n={2} done={connected} title="Connect Cloudflare">
+          {connected ? (
+            <p className="muted small">
+              Connected{props.cloudflare.accountName ? ` to ${props.cloudflare.accountName}` : ""}. nimbox can now set up your domain's mail for you.
+            </p>
+          ) : (
+            <>
+              <p>So nimbox can set up your domain's mail for you, instead of you clicking through Cloudflare's dashboard.</p>
+              <ConnectCloudflare />
+              <p className="muted small">Cloudflare shows what nimbox may change and asks which account to use: pick the one you deployed nimbox to.</p>
+            </>
+          )}
+        </Card>
+      )}
+
+      <Card n={props.cloudflare?.enabled ? 3 : 2} done={props.mailboxes.length > 0} title="Your email address">
         {props.mailboxes.length > 0 ? (
           <>
             <p>
@@ -237,7 +282,7 @@ export function Setup(props: {
         )}
       </Card>
 
-      <Card n={3} done={sendingReady} title="Sending">
+      <Card n={props.cloudflare?.enabled ? 4 : 3} done={sendingReady} title="Sending">
         {!setup ? (
           <p className="muted">Checking…</p>
         ) : !setup.brevo.connected ? (
@@ -271,6 +316,35 @@ export function Setup(props: {
                 <p key={d.domain}>
                   <b>{d.domain}</b> is ready to send.
                 </p>
+              ) : d.state === "pending" && connected ? (
+                <div key={d.domain} className="records">
+                  <p>
+                    Brevo needs a few records in <b>{d.domain}</b>'s DNS to confirm it's yours. nimbox can add them for you.
+                  </p>
+                  <button
+                    className="primary"
+                    disabled={writing !== null}
+                    onClick={async () => {
+                      setWriting(d.domain);
+                      setWriteError(null);
+                      try {
+                        const updated = await api.writeBrevoRecords(d.domain);
+                        setSetup((cur) => (cur ? { ...cur, domains: cur.domains.map((x) => (x.domain === d.domain ? updated : x)) } : cur));
+                      } catch (e) {
+                        setWriteError((e as Error).message);
+                      } finally {
+                        setWriting(null);
+                      }
+                    }}
+                  >
+                    {writing === d.domain ? "Adding…" : "Add them for me"}
+                  </button>{" "}
+                  <button onClick={() => checkDomain(d.domain)} disabled={checking}>
+                    {checking ? "Checking…" : "Check again"}
+                  </button>
+                  {writeError && <p className="error-text small">{writeError}</p>}
+                  <p className="muted small">Brevo can take a few minutes to see new records. Every other record stays as it is.</p>
+                </div>
               ) : d.state === "pending" ? (
                 <div key={d.domain} className="records">
                   <p>
@@ -335,9 +409,11 @@ export function Setup(props: {
         )}
       </Card>
 
-      <Card n={4} done={Boolean(setup?.received)} title="Receiving">
+      <Card n={props.cloudflare?.enabled ? 5 : 4} done={Boolean(setup?.received) || (connected && receivingDone(receiving))} title="Receiving">
         {setup?.received ? (
           <p>Mail is arriving in nimbox.</p>
+        ) : connected ? (
+          <ReceivingPanel onChange={setReceiving} />
         ) : (
           <>
             <p>Tell Cloudflare to deliver your mail to nimbox:</p>
@@ -392,10 +468,7 @@ export function Setup(props: {
                 Then click <b>Save</b>.
               </li>
             </ol>
-            <p className="muted small">
-              Use several addresses at {domain ? <b>{domain}</b> : "your domain"}? Instead of one rule per address, turn on the <b>Catch-all</b> rule
-              under <b>Routing Rules</b> with the same action and Worker. Every address then gets its own inbox in nimbox.
-            </p>
+            <p className="muted small">More addresses can be added later in Settings, each with its own routing rule.</p>
             <button onClick={load} disabled={checking}>
               {checking ? "Checking…" : "Check again"}
             </button>
@@ -404,7 +477,7 @@ export function Setup(props: {
       </Card>
 
       {props.github?.enabled && (
-        <Card n={5} done={githubReady(props.github)} title="One-click updates (optional)">
+        <Card n={props.cloudflare?.enabled ? 6 : 5} done={githubReady(props.github)} title="One-click updates (optional)">
           <p>Connect GitHub once so nimbox can install its own updates with one click later.</p>
           <GithubConnect github={props.github} onChange={props.onGithub} />
         </Card>

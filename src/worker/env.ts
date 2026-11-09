@@ -13,6 +13,7 @@ export interface AppEnv {
   DEV_ACCESS_BYPASS?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_APP_SLUG?: string;
+  CLOUDFLARE_CLIENT_ID?: string;
 }
 
 export function mailboxStub(env: AppEnv, address: string) {

@@ -7,11 +7,18 @@ import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { decodeHeader, parseAddresses } from "./headers";
 import { newId } from "./ids";
 import { oldMailRecords } from "./dns";
+import { cfApi } from "./cloudflare";
+import { addRule, ensureDestination, findZone, removeRule, writeDnsRecords } from "./cloudflare-actions";
+import { cloudflareLink, plainCloudflareError, privateCloudflareRoute, publicCloudflareRoute } from "./cloudflare-routes";
 import { detectProvider } from "./provider";
 import { buildEml, textToHtml, type OutgoingAttachment } from "./mime";
 import type { Folder, MessageRow, Person } from "./types";
 import type { UpdaterAction, UpdaterResult } from "./updater";
 import { VERSION } from "./release";
+
+async function cfRouting(token: string, zoneId: string) {
+  return cfApi<{ enabled?: boolean }>(token, `/zones/${zoneId}/email/routing`).catch(() => null);
+}
 
 const ADDRESS = /^[^\s@<>()",;]+@[^\s@<>()",;]+\.[^\s@<>()",;]+$/;
 
@@ -308,6 +315,22 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
     await directory.setSetting("sendVerified", "1");
     return json({ ok: true, to: userEmail, provider: await detectProvider(userEmail) });
   }
+  if (path === "/api/setup/brevo-records" && method === "POST") {
+    const domain = ((await readJson<{ domain?: string }>(request)).domain ?? "").trim().toLowerCase();
+    const apiKey = await brevoKey(env);
+    if (!apiKey) throw new HttpError(409, "Add your Brevo key first");
+    if (!domainsOf(await directory.list()).includes(domain)) throw new HttpError(404, "Unknown domain");
+    const link = await cloudflareLink(env);
+    if (!link) throw new HttpError(409, "Connect Cloudflare first");
+    const current = await brevoDomain(apiKey, domain);
+    if (current.state !== "pending") return json(current);
+    try {
+      await writeDnsRecords(link, domain, current.records.filter((r) => !r.ok));
+    } catch (error) {
+      throw new HttpError(502, plainCloudflareError(error));
+    }
+    return json(await brevoDomain(apiKey, domain, true));
+  }
   if (path === "/api/setup/done" && method === "POST") {
     await directory.setSetting("setupDone", "1");
     return json({ ok: true });
@@ -318,6 +341,12 @@ async function setupRoute(request: Request, env: AppEnv, path: string, method: s
 async function route(request: Request, env: AppEnv, ctx: ExecutionContext | undefined, url: URL): Promise<Response> {
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
+
+  if (path.startsWith("/api/cloudflare")) {
+    const signedIn = Boolean(await authenticate(request, env, ctx));
+    const open = await publicCloudflareRoute(request, env, url, path, signedIn);
+    if (open) return open;
+  }
 
   if (path === "/api/status" && method === "GET") {
     const user = await authenticate(request, env, ctx, true);
@@ -338,6 +367,9 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
 
   const setup = await setupRoute(request, env, path, method, user.email);
   if (setup) return setup;
+
+  const cloudflare = await privateCloudflareRoute(request, env, ctx, path, () => readJson(request));
+  if (cloudflare) return cloudflare;
 
   const updates = updateRoutes[`${method} ${path}`];
   if (updates) {
@@ -365,7 +397,21 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
       const address = (body.address ?? "").trim().toLowerCase();
       if (!ADDRESS.test(address)) throw new HttpError(400, "Not an email address");
       await directory.add(address);
-      return json({ address }, 201);
+      let routed = false;
+      const link = await cloudflareLink(env);
+      if (link) {
+        try {
+          const zone = await findZone(link, address.split("@")[1]);
+          const settings = zone ? await cfRouting(link.accessToken, zone.id) : null;
+          if (zone && settings?.enabled) {
+            await addRule(link, zone.id, address);
+            routed = true;
+          }
+        } catch (error) {
+          console.error("add rule", error);
+        }
+      }
+      return json({ address, routed }, 201);
     }
   }
 
@@ -375,10 +421,45 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
   const rest = match[2] ?? "";
   const stub = mailboxStub(env, mailbox);
 
+  if (rest === "" && method === "DELETE") {
+    const directory = directoryStub(env);
+    if ((await directory.list()).length <= 1) throw new HttpError(400, "Keep at least one address");
+    const link = await cloudflareLink(env);
+    if (link) {
+      try {
+        await removeRule(link, mailbox);
+      } catch (error) {
+        throw new HttpError(502, plainCloudflareError(error));
+      }
+    }
+    await directory.remove(mailbox);
+    let cursor: string | undefined;
+    do {
+      const page = await env.MAIL.list({ prefix: `${mailbox}/`, cursor });
+      if (page.objects.length) await env.MAIL.delete(page.objects.map((o) => o.key));
+      cursor = page.truncated ? page.cursor : undefined;
+    } while (cursor);
+    await stub.destroy();
+    return json({ ok: true });
+  }
+
   if (rest === "" && method === "PATCH") {
     const body = await readJson<{ displayName?: string; forwardTo?: string }>(request);
     if (body.forwardTo && !ADDRESS.test(body.forwardTo.trim())) throw new HttpError(400, "Forward address is not an email address");
-    return json(await stub.setSettings({ displayName: body.displayName, forwardTo: body.forwardTo }));
+    const saved = await stub.setSettings({ displayName: body.displayName, forwardTo: body.forwardTo });
+    let forwardStatus: "verified" | "sent" | "manual" | null = null;
+    if (saved.forwardTo) {
+      const link = await cloudflareLink(env);
+      forwardStatus = "manual";
+      if (link) {
+        try {
+          forwardStatus = await ensureDestination(link, saved.forwardTo);
+        } catch (error) {
+          console.error("destination", error);
+        }
+      }
+    }
+    return json({ ...saved, forwardStatus });
   }
 
   if (rest === "/threads" && method === "GET") {

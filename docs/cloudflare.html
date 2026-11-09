@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-J1mFGjonrYWjEtWRMsYcYLlOTolVQ1ykSwzAYiQuNAI='" />
+    <title>Connect Cloudflare to nimbox</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f6f7f9; color: #1d1d1f; }
+      main { max-width: 440px; margin: 24px; padding: 28px; background: #fff; border: 1px solid #e2e4e8; border-radius: 14px; text-align: center; }
+      h1 { font-size: 20px; margin: 0 0 10px; }
+      .host { font-weight: 700; word-break: break-all; }
+      a.button { display: inline-block; margin-top: 16px; padding: 10px 22px; border-radius: 8px; background: #2f6fde; color: #fff; text-decoration: none; font-weight: 600; }
+      .small { color: #6b7078; font-size: 13px; margin-top: 14px; }
+      @media (prefers-color-scheme: dark) { body { background: #1b1c1f; color: #e8e9eb; } main { background: #222327; border-color: #34363c; } }
+    </style>
+  </head>
+  <body>
+    <main id="main">
+      <h1>Something went wrong</h1>
+      <p>This link is missing information. Start again from your nimbox.</p>
+    </main>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var state = params.get("state") || "";
+        var host = state.split("~")[1] || "";
+        if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(host)) return;
+        var target = "https://" + host + "/api/cloudflare/callback" + location.search;
+        var main = document.getElementById("main");
+        main.textContent = "";
+        var h = document.createElement("h1");
+        h.textContent = "Finish connecting Cloudflare";
+        var p = document.createElement("p");
+        p.append("Cloudflare sent you back here. Continue to your nimbox at ");
+        var b = document.createElement("span");
+        b.className = "host";
+        b.textContent = host;
+        p.append(b, ".");
+        var a = document.createElement("a");
+        a.className = "button";
+        a.href = target;
+        a.rel = "noreferrer";
+        a.textContent = "Continue to " + host;
+        var warn = document.createElement("p");
+        warn.className = "small";
+        warn.textContent = "Only continue if this is the address of your own nimbox. If you didn't start this, close this page.";
+        main.append(h, p, a, warn);
+        history.replaceState(null, "", location.pathname);
+      })();
+    </script>
+  </body>
+</html>
