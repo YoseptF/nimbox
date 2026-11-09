@@ -150,12 +150,14 @@ function SignInCard({ cloudflare, notice }: { cloudflare: CloudflareState | null
         <h1>One step before your inbox</h1>
         <p>nimbox keeps your mail private by asking you to sign in first. That protection is not on yet, so nothing is shown.</p>
       </div>
-      <ReturnNotice notice={notice} />
+      <ReturnNotice
+        notice={notice?.ok && cloudflare?.connected ? { ok: true, text: "Cloudflare is connected. One more click below turns on the sign-in." } : notice}
+      />
       <section className="card">
         <div className="card-body solo">
           {automatic && !manual ? (
             <>
-              <TurnOnSignIn cloudflare={cloudflare!} />
+              <TurnOnSignIn cloudflare={cloudflare!} highlight={Boolean(notice?.ok)} />
               <button className="link small skip" onClick={() => setManual(true)}>
                 I'd rather do it in the Cloudflare dashboard
               </button>
