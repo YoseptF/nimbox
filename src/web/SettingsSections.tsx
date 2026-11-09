@@ -127,13 +127,21 @@ export function UninstallSection({ cloudflare, github }: { cloudflare: Cloudflar
   const [typed, setTyped] = useState("");
   const [state, setState] = useState<"idle" | "working" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [workerName, setWorkerName] = useState<string>("");
   if (!cloudflare?.enabled) return null;
   const repoUrl = github?.repo ? `https://github.com/${github.repo}/settings` : null;
   if (state === "done") {
     return (
       <section className="danger">
         <h3>nimbox is being removed</h3>
-        <p className="small">In a few seconds this page stops working. Three things are left for you, because nimbox has no permission to touch them:</p>
+        <p className="small">
+          Your mail and settings are gone, and in a few seconds this page stops working. If{" "}
+          <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noopener">
+            Workers &amp; Pages
+          </a>{" "}
+          still lists <b>{workerName || "your nimbox"}</b> after a minute, delete it there.
+        </p>
+        <p className="small">A few things are left for you, because nimbox isn't allowed to remove them:</p>
         <ol className="howto small">
           <li>
             Delete your copy on GitHub{repoUrl ? (
@@ -183,7 +191,8 @@ export function UninstallSection({ cloudflare, github }: { cloudflare: Cloudflar
                 setState("working");
                 setError(null);
                 try {
-                  await api.uninstall(typed);
+                  const result = await api.uninstall(typed);
+                  setWorkerName(result.workerName);
                   setState("done");
                 } catch (e) {
                   setError((e as Error).message);
