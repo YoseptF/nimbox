@@ -72,9 +72,9 @@ export function AddMailbox({ onAdded, label = "Add address" }: { onAdded: () => 
       onSubmit={async (e) => {
         e.preventDefault();
         try {
-          await api.addMailbox(address.trim());
+          const added = await api.addMailbox(address.trim());
           setAddress("");
-          setError(null);
+          setError(added.routeError ? `Added, but nimbox couldn't send it to your inbox yet. ${added.routeError}` : null);
           onAdded();
         } catch (err) {
           setError((err as Error).message);
@@ -413,7 +413,7 @@ export function Setup(props: {
         {setup?.received ? (
           <p>Mail is arriving in nimbox.</p>
         ) : connected ? (
-          <ReceivingPanel onChange={setReceiving} />
+          <ReceivingPanel addresses={props.mailboxes.map((m) => m.address)} onChange={setReceiving} />
         ) : (
           <>
             <p>Tell Cloudflare to deliver your mail to nimbox:</p>
