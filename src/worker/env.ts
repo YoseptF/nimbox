@@ -14,6 +14,7 @@ export interface AppEnv {
   GITHUB_CLIENT_ID?: string;
   GITHUB_APP_SLUG?: string;
   CLOUDFLARE_CLIENT_ID?: string;
+  CF_VERSION_METADATA?: WorkerVersionMetadata;
 }
 
 export function mailboxStub(env: AppEnv, address: string) {

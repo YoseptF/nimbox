@@ -1,9 +1,9 @@
-import { authorizeUrl, CfError, exchangeCode, findWorkerForHost, pkceChallenge, randomToken, revokeToken, type CloudflareLink } from "./cloudflare";
+import { authorizeUrl, CfError, exchangeCode, findWorkerByVersion, pkceChallenge, randomToken, revokeToken, type CloudflareLink } from "./cloudflare";
 import {
   bucketName,
   deleteAccessApp,
-  deleteBucket,
   deleteWorker,
+  deleteBucket,
   findAccessApp,
   protectWorker,
   receivingStatus,
@@ -11,7 +11,7 @@ import {
   setSessionDuration,
   setUpReceiving,
 } from "./cloudflare-actions";
-import { directoryStub, type AppEnv } from "./env";
+import { directoryStub, mailboxStub, updaterStub, type AppEnv } from "./env";
 import { CLOUDFLARE_CLIENT_ID, CLOUDFLARE_REDIRECT_URI } from "./release";
 
 export const SESSION_CHOICES = ["1h", "24h", "168h", "720h"];
@@ -79,7 +79,7 @@ export async function publicCloudflareRoute(request: Request, env: AppEnv, url: 
     if (!verifier || !code) return redirect(`/?cloudflare=${url.searchParams.get("error") === "access_denied" ? "cancelled" : "failed"}`);
     try {
       const token = await exchangeCode(clientId, CLOUDFLARE_REDIRECT_URI, code, verifier);
-      const worker = await findWorkerForHost(token.accessToken, url.hostname);
+      const worker = await findWorkerByVersion(token.accessToken, url.hostname, env.CF_VERSION_METADATA?.id ?? "");
       if (!worker) {
         await revokeToken(clientId, token.accessToken);
         return redirect("/?cloudflare=wrong-account");
@@ -167,13 +167,16 @@ export async function privateCloudflareRoute(
       } while (cursor);
       const bucket = await bucketName(link).catch(() => null);
       if (bucket) await deleteBucket(link, bucket);
+      for (const address of addresses) await mailboxStub(env, address).destroy();
+      await updaterStub(env).destroy();
+      await directory.destroy();
       const finish = (async () => {
-        await deleteWorker(link);
+        await deleteWorker(link).catch((error) => console.error("delete worker", error));
         await revokeToken(clientId, link.accessToken);
-      })().catch((error) => console.error("uninstall", error));
+      })();
       if (typeof ctx?.waitUntil === "function") ctx.waitUntil(finish);
       else await finish;
-      return json({ ok: true, bucket });
+      return json({ ok: true, bucket, workerName: link.scriptName });
     }
   } catch (error) {
     if (!(error instanceof CfError)) console.error("cloudflare action", error);

@@ -4,14 +4,15 @@ export const CF_REVOKE = "https://dash.cloudflare.com/oauth2/revoke";
 export const CF_API = "https://api.cloudflare.com/client/v4";
 
 export const CF_SCOPES = [
+  "workers-scripts.admin",
+  "workers-r2.write",
+  "dns.write",
   "zone.read",
   "zone-settings.write",
-  "dns.write",
-  "email-routing-rule.write",
-  "email-routing-address.write",
   "access.write",
-  "workers-scripts.write",
-  "workers-r2.write",
+  "access.revoke",
+  "email-routing-address.write",
+  "email-routing-rule.write",
   "offline_access",
 ];
 
@@ -112,31 +113,23 @@ export async function cfApi<T>(token: string, path: string, init: RequestInit = 
   return data.result as T;
 }
 
-export async function findWorkerForHost(token: string, hostname: string) {
+export async function findWorkerByVersion(token: string, hostname: string, versionId: string) {
+  if (!versionId) return null;
+  const firstLabel = hostname.split(".")[0];
   const accounts = await cfApi<{ id: string; name: string }[]>(token, "/accounts?per_page=50");
   for (const account of accounts) {
-    let scriptName: string | null = null;
-    try {
-      const sub = await cfApi<{ subdomain: string }>(token, `/accounts/${account.id}/workers/subdomain`);
-      const suffix = `.${sub.subdomain}.workers.dev`;
-      if (hostname.endsWith(suffix)) {
-        const first = hostname.slice(0, -suffix.length);
-        if (first && !first.includes(".")) scriptName = first;
-      }
-    } catch {}
-    if (!scriptName) {
-      try {
-        const domains = await cfApi<{ hostname: string; service: string }[]>(
-          token,
-          `/accounts/${account.id}/workers/domains?hostname=${encodeURIComponent(hostname)}`,
-        );
-        scriptName = domains.find((d) => d.hostname === hostname)?.service ?? null;
-      } catch {}
-    }
-    if (!scriptName) continue;
     const scripts = await cfApi<{ id: string; tag?: string }[]>(token, `/accounts/${account.id}/workers/scripts`);
-    const script = scripts.find((s) => s.id === scriptName);
-    if (script?.tag) return { accountId: account.id, accountName: account.name, scriptName, scriptTag: script.tag };
+    const ordered = [...scripts.filter((s) => s.id === firstLabel), ...scripts.filter((s) => s.id !== firstLabel)].slice(0, 25);
+    for (const script of ordered) {
+      if (!script.tag) continue;
+      const versions = await cfApi<{ items?: { id: string }[] }>(
+        token,
+        `/accounts/${account.id}/workers/scripts/${encodeURIComponent(script.id)}/versions?per_page=20`,
+      ).catch(() => ({ items: [] }));
+      if (versions.items?.some((v) => v.id === versionId)) {
+        return { accountId: account.id, accountName: account.name, scriptName: script.id, scriptTag: script.tag };
+      }
+    }
   }
   return null;
 }
