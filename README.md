@@ -87,9 +87,9 @@ Updates keep your Worker name, bucket name and other values in `wrangler.jsonc`.
 
 ## Uninstall
 
-In nimbox, open **Settings → Remove nimbox**, type **delete everything**, and confirm. With Cloudflare connected, nimbox deletes all your mail and removes what it created in Cloudflare: the routing rules for your addresses, the sign-in protection, the storage bucket, and finally the app itself. Mail sent to your addresses afterwards bounces back to the sender.
+In nimbox, open **Settings → Remove nimbox**, type **delete everything**, and confirm. With Cloudflare connected, nimbox deletes all your mail and its settings, then removes what it created in Cloudflare: the routing rules for your addresses, the sign-in protection, the storage bucket, and finally the app itself. Mail sent to your addresses afterwards bounces back to the sender.
 
-Three things are left for you, because nimbox has no permission to touch them:
+Three things are left for you, because nimbox isn't allowed to remove them:
 
 1. **Your copy on GitHub.** Open it, go to **Settings**, and click **Delete this repository** at the bottom.
 2. **The update app**, if you turned on one-click updates. On [your installed GitHub Apps](https://github.com/settings/installations), click **Configure** next to **nimbox-updater** and choose **Uninstall**; then **Revoke** it on [your authorized GitHub Apps](https://github.com/settings/apps/authorizations).
@@ -143,7 +143,32 @@ Run the checks with `npm run typecheck` and `npm test`.
 
 "Connect Cloudflare" uses a public Cloudflare OAuth client owned by the maintainer, with PKCE and no secret. Cloudflare only allows exact redirect URLs, and every install has its own address, so Cloudflare sends people back to one fixed page, [`docs/cloudflare.html`](docs/cloudflare.html) on this repository's GitHub Pages. That page shows which nimbox the sign-in belongs to and continues there only when the person clicks. It stores nothing. The sign-in can't be finished without the secret code that only the nimbox that started it holds, and nimbox keeps the connection only if the Cloudflare account really runs that nimbox.
 
-The feature stays hidden until `CLOUDFLARE_CLIENT_ID` in `src/worker/release.ts` is set.
+nimbox checks that the Cloudflare account runs it by asking Cloudflare for its own current version (the `CF_VERSION_METADATA` binding) and looking for that exact version among the account's Workers.
+
+To register the client (Cloudflare dashboard → **Manage Account → OAuth clients → Create client**):
+
+- **Client name**: `nimbox`
+- **Response type**: `code`
+- **Grant types**: `authorization_code` and `refresh_token`
+- **Token authentication method**: `none`
+- **Redirect URL**: `https://yoseptf.github.io/nimbox/cloudflare.html` (GitHub Pages for this repository, from `main`, folder `/docs`)
+- **Scopes**, all required:
+
+  | Dashboard choice | Scope |
+  | --- | --- |
+  | Workers → Admin (only Admin on this row) | `workers-scripts.admin` |
+  | Workers R2 Storage → Edit | `workers-r2.write` |
+  | DNS → Edit | `dns.write` |
+  | Zone → Read | `zone.read` |
+  | Zone Settings → Edit | `zone-settings.write` |
+  | Access: Apps and Policies → Edit | `access.write` (Cloudflare adds `access.revoke` with it) |
+  | Email Routing Addresses → Edit | `email-routing-address.write` |
+  | Email Routing Rules → Edit | `email-routing-rule.write` |
+
+  `src/worker/cloudflare.ts` must request exactly these. Workers → Admin is the one Workers choice that covers listing Workers and their versions, reading the Worker's settings, and deleting the Worker on uninstall.
+- For use outside the maintainer's own account, the client must be public: it needs a logo, a client URL on a domain verified with the TXT record Cloudflare shows, and **Change Visibility → Public** (permanent).
+
+The client ID goes in `CLOUDFLARE_CLIENT_ID` in `src/worker/release.ts`.
 
 ## Releasing
 

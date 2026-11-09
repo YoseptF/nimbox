@@ -30,7 +30,8 @@ export const api = {
     request<ReceivingStatus>("/api/cloudflare/receiving", { method: "POST", body: JSON.stringify({ domain, approve }) }),
   session: () => request<SessionState>("/api/cloudflare/session"),
   setSession: (duration: string) => request<SessionState>("/api/cloudflare/session", { method: "PUT", body: JSON.stringify({ duration }) }),
-  uninstall: (confirm: string) => request<{ ok: true }>("/api/cloudflare/uninstall", { method: "POST", body: JSON.stringify({ confirm }) }),
+  uninstall: (confirm: string) =>
+    request<{ ok: true; workerName: string }>("/api/cloudflare/uninstall", { method: "POST", body: JSON.stringify({ confirm }) }),
   writeBrevoRecords: (domain: string) => request<SetupDomain>("/api/setup/brevo-records", { method: "POST", body: JSON.stringify({ domain }) }),
   removeMailbox: (address: string) => request<{ ok: true }>(`/api/mailboxes/${encodeURIComponent(address)}`, { method: "DELETE", body: "{}" }),
   setup: () => request<SetupState>("/api/setup"),

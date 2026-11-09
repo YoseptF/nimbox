@@ -11,7 +11,7 @@ interface Call {
   body: unknown;
 }
 
-function fakeCloudflare(options: { subdomain?: string; domains?: { hostname: string; service: string }[]; routingEnabled?: boolean } = {}) {
+function fakeCloudflare(options: { ownVersion?: boolean; routingEnabled?: boolean } = {}) {
   const state = {
     routingEnabled: options.routingEnabled ?? false,
     dns: [
@@ -45,12 +45,14 @@ function fakeCloudflare(options: { subdomain?: string; domains?: { hostname: str
       return new Response(null, { status: 200 });
     }
     if (path === "/accounts") return ok([{ id: "acc1", name: "Example account" }]);
-    if (path === "/accounts/acc1/workers/subdomain") return ok({ subdomain: options.subdomain ?? "someone" });
-    if (path === "/accounts/acc1/workers/domains") return ok(options.domains ?? [{ hostname: "localhost", service: "nimbox" }]);
-    if (path === "/accounts/acc1/workers/scripts" && method === "GET") return ok([{ id: "nimbox", tag: "tag123" }]);
+    if (path === "/accounts/acc1/workers/scripts" && method === "GET") return ok([{ id: "other", tag: "tag999" }, { id: "nimbox", tag: "tag123" }]);
+    if (path === "/accounts/acc1/workers/scripts/other/versions") return ok({ items: [{ id: "someone-elses-version" }] });
+    if (path === "/accounts/acc1/workers/scripts/nimbox/versions") {
+      return ok({ items: [{ id: options.ownVersion === false ? "unrelated-version" : appEnv.CF_VERSION_METADATA!.id }] });
+    }
     if (path === "/accounts/acc1/workers/scripts/nimbox/settings") return ok({ bindings: [{ type: "r2_bucket", name: "MAIL", bucket_name: "my-mail" }] });
-    if (path === "/accounts/acc1/workers/scripts/nimbox" && method === "DELETE") return ok(null);
     if (path === "/accounts/acc1/r2/buckets/my-mail" && method === "DELETE") return ok(null);
+    if (path === "/accounts/acc1/workers/scripts/nimbox" && method === "DELETE") return ok(null);
     if (path === "/accounts/acc1/access/apps" && method === "GET") return ok(state.apps);
     if (path === "/accounts/acc1/access/apps" && method === "POST") {
       const app = { id: "app1", ...(body as object) };
@@ -123,7 +125,20 @@ describe("connecting Cloudflare", () => {
       code_challenge_method: "S256",
     });
     expect(location.searchParams.get("state")).toMatch(/~localhost$/);
-    expect(location.searchParams.get("scope")).toContain("email-routing-rule.write");
+    expect(location.searchParams.get("scope")!.split(" ").sort()).toEqual(
+      [
+        "access.revoke",
+        "access.write",
+        "dns.write",
+        "email-routing-address.write",
+        "email-routing-rule.write",
+        "offline_access",
+        "workers-r2.write",
+        "workers-scripts.admin",
+        "zone-settings.write",
+        "zone.read",
+      ].sort(),
+    );
   });
 
   it("keeps the connection only when the account runs this nimbox", async () => {
@@ -145,7 +160,7 @@ describe("connecting Cloudflare", () => {
   });
 
   it("refuses an account that doesn't run this nimbox", async () => {
-    const { state } = fakeCloudflare({ domains: [] });
+    const { state } = fakeCloudflare({ ownVersion: false });
     await api("/api/cloudflare", { method: "DELETE", body: "{}" });
     const { callback } = await connect();
     expect(callback.headers.get("location")).toBe("/?cloudflare=wrong-account");
@@ -245,7 +260,7 @@ describe("what nimbox does with the connection", () => {
     ]);
   });
 
-  it("removes everything it created when asked to uninstall, the Worker last", async () => {
+  it("wipes its data and removes everything it created when asked to uninstall, the Worker last", async () => {
     const { state, calls } = fakeCloudflare({ routingEnabled: true });
     await api("/api/cloudflare", { method: "DELETE", body: "{}" });
     await connect();
@@ -256,14 +271,20 @@ describe("what nimbox does with the connection", () => {
     expect((await api("/api/cloudflare/uninstall", { method: "POST", body: JSON.stringify({ confirm: "yes" }) })).status).toBe(400);
     const removed = await api("/api/cloudflare/uninstall", { method: "POST", body: JSON.stringify({ confirm: "delete everything" }) });
     expect(removed.status, await removed.clone().text()).toBe(200);
+    expect(await removed.json()).toMatchObject({ ok: true, bucket: "my-mail", workerName: "nimbox" });
 
     expect(state.rules.filter((r) => JSON.stringify(r).includes("bye@mail.example"))).toHaveLength(0);
     expect(state.apps).toHaveLength(0);
     expect((await appEnv.MAIL.list()).objects).toHaveLength(0);
+    expect(calls.some((c) => c.method === "DELETE" && c.url.pathname.endsWith("/r2/buckets/my-mail"))).toBe(true);
     const deletes = calls.filter((c) => c.method === "DELETE").map((c) => c.url.pathname.replace("/client/v4", ""));
-    expect(deletes.indexOf("/accounts/acc1/r2/buckets/my-mail")).toBeLessThan(deletes.indexOf("/accounts/acc1/workers/scripts/nimbox"));
-    expect(calls.find((c) => c.url.pathname.endsWith("/workers/scripts/nimbox") && c.method === "DELETE")?.url.searchParams.get("force")).toBe("true");
+    expect(deletes.at(-1)).toBe("/accounts/acc1/workers/scripts/nimbox");
+    expect(calls.find((c) => c.method === "DELETE" && c.url.pathname.endsWith("/workers/scripts/nimbox"))?.url.searchParams.get("force")).toBe("true");
+    expect(state.revoked.length).toBeGreaterThan(0);
+    expect(await (await api("/api/mailboxes")).json()).toEqual([]);
+    expect(await (await api("/api/cloudflare")).json()).toMatchObject({ connected: false });
   });
+
 });
 
 describe("forwarding", () => {

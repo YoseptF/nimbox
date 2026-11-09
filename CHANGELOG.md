@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- **Connect Cloudflare** is turned on.
+- Removing nimbox wipes all of its data first, then deletes the app itself.
+- Removing an address and adding it again works.
+
 ## 0.4.0
 
 - New **Connect Cloudflare** step: one approval on Cloudflare's own screen, and nimbox does the Cloudflare parts of setup for you.

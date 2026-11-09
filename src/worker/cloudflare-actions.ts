@@ -220,9 +220,6 @@ export async function deleteBucket(link: CloudflareLink, name: string) {
   await cfApi(link.accessToken, `/accounts/${link.accountId}/r2/buckets/${encodeURIComponent(name)}`, { method: "DELETE" });
 }
 
-export async function deleteWorker(link: CloudflareLink) {
-  await cfApi(link.accessToken, `/accounts/${link.accountId}/workers/scripts/${link.scriptName}?force=true`, { method: "DELETE" });
-}
 
 export async function ensureDestination(link: CloudflareLink, email: string): Promise<"verified" | "sent"> {
   const target = email.toLowerCase();
@@ -234,4 +231,8 @@ export async function ensureDestination(link: CloudflareLink, email: string): Pr
   if (found) return found.verified ? "verified" : "sent";
   await cfApi(link.accessToken, `/accounts/${link.accountId}/email/routing/addresses`, { method: "POST", body: JSON.stringify({ email: target }) });
   return "sent";
+}
+
+export async function deleteWorker(link: CloudflareLink) {
+  await cfApi(link.accessToken, `/accounts/${link.accountId}/workers/scripts/${link.scriptName}?force=true`, { method: "DELETE" });
 }

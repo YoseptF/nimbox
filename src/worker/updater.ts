@@ -94,6 +94,11 @@ export class Updater extends DurableObject<AppEnv> {
     }
   }
 
+  async destroy() {
+    await this.ctx.storage.deleteAll();
+    this.sql.exec("CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+  }
+
   private get<T>(key: string): T | null {
     const rows = this.sql.exec("SELECT value FROM state WHERE key = ?", key).toArray();
     return rows.length ? (JSON.parse(rows[0].value as string) as T) : null;
