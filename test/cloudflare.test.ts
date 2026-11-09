@@ -11,7 +11,7 @@ interface Call {
   body: unknown;
 }
 
-function fakeCloudflare(options: { ownVersion?: boolean; routingEnabled?: boolean } = {}) {
+function fakeCloudflare(options: { ownVersion?: boolean; routingEnabled?: boolean; rulesFail?: boolean } = {}) {
   const state = {
     routingEnabled: options.routingEnabled ?? false,
     dns: [
@@ -89,6 +89,9 @@ function fakeCloudflare(options: { ownVersion?: boolean; routingEnabled?: boolea
       return ok(null);
     }
     if (path === "/zones/zone1/email/routing/rules" && method === "GET") return ok(state.rules);
+    if (path === "/zones/zone1/email/routing/rules" && method === "POST" && options.rulesFail) {
+      return Response.json({ success: false, errors: [{ code: 10000, message: "Authentication error" }] }, { status: 403 });
+    }
     if (path === "/zones/zone1/email/routing/rules" && method === "POST") {
       const rule = { id: `rule${state.rules.length + 1}`, ...(body as { enabled: boolean; matchers: unknown[]; actions: unknown[] }) };
       state.rules.push(rule);
@@ -305,5 +308,17 @@ describe("forwarding", () => {
     const saved = await api("/api/mailboxes/fw@mail.example", { method: "PATCH", body: JSON.stringify({ forwardTo: "copy@example.net" }) });
     expect(await saved.json()).toMatchObject({ forwardTo: "copy@example.net", forwardStatus: "sent" });
     expect(calls.find((c) => c.method === "POST" && c.url.pathname.endsWith("/email/routing/addresses"))?.body).toEqual({ email: "copy@example.net" });
+  });
+});
+
+describe("adding an address while connected", () => {
+  it("says so when Cloudflare refuses to create its rule", async () => {
+    fakeCloudflare({ routingEnabled: true, rulesFail: true });
+    await api("/api/cloudflare", { method: "DELETE", body: "{}" });
+    await connect();
+    const added = await (await api("/api/mailboxes", { method: "POST", body: JSON.stringify({ address: "late@mail.example" }) })).json();
+    expect(added).toMatchObject({ address: "late@mail.example", routed: false, routeError: expect.stringContaining("Cloudflare did not allow this") });
+    const [status] = (await (await api("/api/cloudflare/receiving")).json()) as { missing: string[] }[];
+    expect(status.missing).toContain("late@mail.example");
   });
 });

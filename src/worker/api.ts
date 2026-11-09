@@ -398,6 +398,7 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
       if (!ADDRESS.test(address)) throw new HttpError(400, "Not an email address");
       await directory.add(address);
       let routed = false;
+      let routeError: string | null = null;
       const link = await cloudflareLink(env);
       if (link) {
         try {
@@ -409,9 +410,10 @@ async function route(request: Request, env: AppEnv, ctx: ExecutionContext | unde
           }
         } catch (error) {
           console.error("add rule", error);
+          routeError = plainCloudflareError(error);
         }
       }
-      return json({ address, routed }, 201);
+      return json({ address, routed, routeError }, 201);
     }
   }
 
