@@ -12,7 +12,10 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [attention, setAttention] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const githubTab = useRef<Window | null>(null);
+  const installCard = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -27,6 +30,7 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
         if (stopped) return;
         if (result.status === "connected") {
           setPhase({ kind: "idle" });
+          if (result.github.connected && !result.github.repo && result.github.candidates.length === 0) openInstall(result.github.installUrl);
           onChange(result.github);
           return;
         }
@@ -47,7 +51,32 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
     };
   }, [phase]);
 
+  const openInstall = (url: string) => {
+    let opened: Window | null = null;
+    const tab = githubTab.current;
+    if (tab && !tab.closed) {
+      try {
+        tab.location.href = url;
+        tab.focus();
+        opened = tab;
+      } catch {}
+    }
+    if (!opened) opened = window.open(url, "nimbox-github");
+    setAttention(true);
+  };
+
   const waitingForInstall = github.connected && !github.repo && github.candidates.length === 0;
+
+  useEffect(() => {
+    if (!waitingForInstall) return;
+    const before = document.title;
+    document.title = "Last step: install on your copy · nimbox";
+    installCard.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return () => {
+      document.title = before;
+    };
+  }, [waitingForInstall]);
+
   useEffect(() => {
     if (!waitingForInstall) return;
     const id = setInterval(async () => {
@@ -74,7 +103,7 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
       await navigator.clipboard.writeText(device.userCode);
       setCopied(true);
     } catch {}
-    window.open(device.verificationUri, "_blank", "noopener");
+    githubTab.current = window.open(device.verificationUri, "nimbox-github");
   };
 
   if (github.connected && github.repo) {
@@ -103,11 +132,18 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
 
   if (waitingForInstall) {
     return (
-      <div className="github-connect">
+      <div className="github-connect" ref={installCard}>
+        <p className="step-label">Step 2 of 2: install on your copy</p>
         <p>
-          Last step: GitHub asks where to install nimbox-updater. Choose <b>Only select repositories</b>, pick your nimbox copy, and click <b>Install</b>.
+          You're not done yet, even if GitHub said "you're all set". GitHub asks where to install nimbox-updater: choose <b>Only select repositories</b>,
+          pick your nimbox copy, and click <b>Install</b>.
         </p>
-        <a className="primary button-link" href={github.installUrl} target="_blank" rel="noopener">
+        <a
+          className={`primary button-link ${attention ? "attention" : ""}`}
+          href={github.installUrl}
+          target="nimbox-github"
+          onClick={() => setAttention(false)}
+        >
           Choose your nimbox copy on GitHub
         </a>
         <p className="muted small">This page continues on its own once you're done.</p>
@@ -118,8 +154,9 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
   if (phase.kind === "code") {
     return (
       <div className="github-connect">
+        <p className="step-label">Step 1 of 2: approve on GitHub</p>
         <p>
-          Enter this code on GitHub, then click <b>Authorize nimbox-updater</b>:
+          Enter this code on GitHub, then click <b>Authorize nimbox-updater</b>. GitHub then says "you're all set": come back to this page for step 2.
         </p>
         <div className="device-code">{phase.device.userCode}</div>
         <button className="primary" onClick={() => openGithub(phase.device)}>
@@ -136,6 +173,10 @@ export function GithubConnect({ github, onChange }: { github: GithubState; onCha
       {phase.kind === "expired" && <p className="small">The code expired before it was used.</p>}
       {phase.kind === "denied" && <p className="small">GitHub says the request was cancelled.</p>}
       {github.lapsed && phase.kind === "idle" && <p className="small">The GitHub connection stopped working. Connect again to install updates.</p>}
+      <p className="small">
+        This takes two short pages on GitHub: first you approve nimbox-updater, then you pick your nimbox copy. After the first page GitHub says
+        "you're all set", but come back here for the second.
+      </p>
       <button className="primary" onClick={start}>
         {phase.kind === "idle" ? "Connect GitHub" : "Get a new code"}
       </button>
