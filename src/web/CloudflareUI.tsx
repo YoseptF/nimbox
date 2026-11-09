@@ -89,24 +89,41 @@ export function receivingDone(list: ReceivingStatus[] | null) {
   return Boolean(list && list.length > 0 && list.every(domainDone));
 }
 
-export function ReceivingPanel({ onChange }: { onChange?: (list: ReceivingStatus[]) => void }) {
+export function ReceivingPanel({ addresses, onChange }: { addresses: string[]; onChange?: (list: ReceivingStatus[]) => void }) {
   const [list, setList] = useState<ReceivingStatus[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [checking, setChecking] = useState(false);
+  const addressKey = addresses.join(",");
+
   const load = async () => {
+    setChecking(true);
+    setError(null);
     try {
       const next = await api.receiving();
-      setList(next);
-      onChange?.(next);
+      setList(Array.isArray(next) ? next : []);
+      onChange?.(Array.isArray(next) ? next : []);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setChecking(false);
     }
   };
 
   useEffect(() => {
     load();
-  }, []);
+  }, [addressKey]);
+
+  const checkAgain = (
+    <button onClick={load} disabled={checking}>
+      {checking ? "Checking…" : "Check again"}
+    </button>
+  );
+
+  if (addresses.length === 0) {
+    return <p>Add your email address in the step above first. Then nimbox can send its mail here.</p>;
+  }
 
   const run = async (domain: string, approve: string[]) => {
     setBusy(domain);
@@ -121,7 +138,25 @@ export function ReceivingPanel({ onChange }: { onChange?: (list: ReceivingStatus
     }
   };
 
-  if (!list) return <p className="muted">{error ?? "Checking your domain…"}</p>;
+  if (!list) {
+    return error ? (
+      <>
+        <p className="error-text small">{error}</p>
+        {checkAgain}
+      </>
+    ) : (
+      <p className="muted">Checking your domain…</p>
+    );
+  }
+
+  if (list.length === 0) {
+    return (
+      <>
+        <p>nimbox couldn't find your address yet. Check again in a moment.</p>
+        {checkAgain}
+      </>
+    );
+  }
 
   return (
     <>

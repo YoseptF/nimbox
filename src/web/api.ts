@@ -55,7 +55,7 @@ export const api = {
     request<{ status: "updated" | "up-to-date"; version: string; commit?: string }>("/api/updates/apply", { method: "POST", body: "{}" }),
   status: () => request<Status>("/api/status"),
   mailboxes: () => request<MailboxInfo[]>("/api/mailboxes"),
-  addMailbox: (address: string) => request<{ address: string; routed: boolean }>("/api/mailboxes", { method: "POST", body: JSON.stringify({ address }) }),
+  addMailbox: (address: string) => request<{ address: string; routed: boolean; routeError: string | null }>("/api/mailboxes", { method: "POST", body: JSON.stringify({ address }) }),
   updateMailbox: (address: string, settings: { displayName?: string; forwardTo?: string }) =>
     request<MailboxInfo & { forwardStatus: "verified" | "sent" | "manual" | null }>(box(address), { method: "PATCH", body: JSON.stringify(settings) }),
   threads: (address: string, folder: Folder, options: { before?: number; q?: string } = {}) => {
