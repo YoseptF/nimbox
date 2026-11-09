@@ -255,6 +255,7 @@ export class Mailbox extends DurableObject<AppEnv> {
 
   async destroy() {
     await this.ctx.storage.deleteAll();
+    this.sql.exec(SCHEMA);
   }
 
   getSettings(): MailboxSettings {

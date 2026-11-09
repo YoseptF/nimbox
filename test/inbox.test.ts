@@ -167,3 +167,16 @@ describe("deleting", () => {
     expect((await appEnv.MAIL.list({ prefix: `${box}/` })).objects).toHaveLength(0);
   });
 });
+
+describe("removing an address", () => {
+  it("can add the same address again afterwards", async () => {
+    await api("/api/mailboxes", { method: "POST", body: JSON.stringify({ address: "keep@again.example" }) });
+    await api("/api/mailboxes", { method: "POST", body: JSON.stringify({ address: "gone@again.example" }) });
+    await deliver(rawEmail({ from: "a@example.org", to: "gone@again.example", subject: "Hi", messageId: "<again1@example.org>" }), "a@example.org", "gone@again.example");
+    expect((await api("/api/mailboxes/gone@again.example", { method: "DELETE", body: "{}" })).status).toBe(200);
+    await api("/api/mailboxes", { method: "POST", body: JSON.stringify({ address: "gone@again.example" }) });
+    const threads = await api("/api/mailboxes/gone@again.example/threads");
+    expect(threads.status).toBe(200);
+    expect(await threads.json()).toEqual([]);
+  });
+});

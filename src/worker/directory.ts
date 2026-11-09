@@ -11,6 +11,10 @@ export class Directory extends DurableObject<AppEnv> {
   constructor(ctx: DurableObjectState, env: AppEnv) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this.createTables();
+  }
+
+  private createTables() {
     this.sql.exec("CREATE TABLE IF NOT EXISTS mailboxes (address TEXT PRIMARY KEY, created_at INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS cf_pending (state TEXT PRIMARY KEY, verifier TEXT NOT NULL, created_at INTEGER NOT NULL)");
@@ -60,6 +64,11 @@ export class Directory extends DurableObject<AppEnv> {
       this.cfForget(true);
       return null;
     }
+  }
+
+  async destroy() {
+    await this.ctx.storage.deleteAll();
+    this.createTables();
   }
 
   getSetting(key: string): string | null {
