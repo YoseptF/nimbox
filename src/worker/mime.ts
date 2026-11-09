@@ -1,3 +1,4 @@
+import { splitQuotedText, unquote } from "../shared/quote";
 import type { Person } from "./types";
 
 export interface OutgoingAttachment {
@@ -46,9 +47,17 @@ export function formatPerson(person: Person) {
   return `${name} <${person.address}>`;
 }
 
+function escapeHtml(text: string) {
+  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
 export function textToHtml(text: string) {
-  const escaped = text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  return `<div style="white-space:pre-wrap">${escaped}</div>`;
+  const { main, attribution, quoted } = splitQuotedText(text);
+  const body = `<div style="white-space:pre-wrap">${escapeHtml(main)}</div>`;
+  if (!quoted) return body;
+  const attr = attribution ? `<div class="gmail_attr">${escapeHtml(attribution)}</div>` : "";
+  const quote = `<blockquote type="cite" style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex"><div style="white-space:pre-wrap">${escapeHtml(unquote(quoted))}</div></blockquote>`;
+  return `${body}<br><div class="gmail_quote">${attr}${quote}</div>`;
 }
 
 function boundary() {
