@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.3
+
+- Connecting GitHub now says up front that it takes two pages, labels them "Step 1 of 2" and "Step 2 of 2", and opens or highlights the second page once you approve the first, since GitHub says "you're all set" too early.
+- After connecting Cloudflare on the first page, nimbox points to the one remaining click instead of just saying it's connected.
+
 ## 0.4.2
 
 - The Receiving step now updates as soon as you add your address, instead of staying empty until you reload the page.
