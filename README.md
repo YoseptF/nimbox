@@ -43,7 +43,7 @@ Bookmark it: this is the link to your inbox.
 Open that address and sign in. nimbox shows a short checklist:
 
 - **Connect Cloudflare**: one button. Cloudflare shows what nimbox may change and asks which account to use; pick the one you deployed nimbox to. After that, nimbox does the Cloudflare parts of the next steps for you.
-- **Your email address**: type the address you want to use.
+- **Your email address**: type the address you want to start with. One is enough: you can add more, like `promos@` or `hello@`, any time from **+ New address** in the sidebar.
 - **Sending**: paste your Brevo key if you didn't on the Deploy form. nimbox then adds the records Brevo needs to your domain's DNS (one button), and lets you send yourself a test email. The step turns Done once Brevo confirms your domain or a test email goes out.
 - **Receiving**: one button. If your domain still sends its mail somewhere else (a forwarder like ImprovMX, for example), nimbox first shows exactly which old records it will delete and asks before deleting them. It then turns on Cloudflare's Email Routing and sends your address to nimbox. From then on, mail stops going to the old service.
 - **One-click updates** (optional): connect GitHub so nimbox can update itself. See [Updating](#updating).
@@ -56,7 +56,7 @@ Without connecting Cloudflare, every step still works: nimbox shows the records 
 
 In nimbox's **Settings**:
 
-- **Addresses**: add or remove addresses at your domain. With Cloudflare connected, each one gets its own routing rule automatically, and mail to addresses you never added bounces back to the sender. Removing an address deletes its mail.
+- **Addresses**: add or remove addresses at your domain (also from **+ New address** in the sidebar). Each one gets its own inbox, and when you write a new message you pick which one it's sent from. With Cloudflare connected, each one gets its own routing rule automatically, and mail to addresses you never added bounces back to the sender. Removing an address deletes its mail.
 - **Also forward incoming mail to**: keep a copy in another inbox. With Cloudflare connected, Cloudflare emails that inbox a confirmation link; click it and forwarding starts.
 - **Sign in again every**: how often nimbox asks you to sign in (1 hour to 1 month; 1 day by default).
 
