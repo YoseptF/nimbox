@@ -273,12 +273,18 @@ export function Setup(props: {
               Your address is <b>{address}</b>
               {props.mailboxes.length > 1 ? ` (and ${props.mailboxes.length - 1} more)` : ""}.
             </p>
-            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
+            <p className="muted small">
+              It's where your mail arrives and what people see when you send. You only need one to start: add more, like promos@, any time from{" "}
+              <b>+ New address</b> in the sidebar.
+            </p>
           </>
         ) : (
           <>
-            <p>Which address on your domain do you want to use?</p>
-            <p className="muted small">It's where your mail arrives and what people see when you send.</p>
+            <p>Which address on your domain do you want to start with?</p>
+            <p className="muted small">
+              It's where your mail arrives and what people see when you send. One is enough for now: you can add more, like promos@ or hello@, any time
+              from the sidebar.
+            </p>
             <AddMailbox onAdded={props.onMailboxes} label="Use this address" />
           </>
         )}

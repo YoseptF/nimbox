@@ -16,6 +16,7 @@ export function Sidebar(props: {
   onFolder: (folder: Folder) => void;
   onCompose: () => void;
   onSettings: () => void;
+  onNewAddress: () => void;
 }) {
   const current = props.mailboxes.find((m) => m.address === props.mailbox);
   return (
@@ -34,26 +35,31 @@ export function Sidebar(props: {
           </li>
         ))}
       </ul>
-      {props.mailboxes.length > 1 && (
-        <>
-          <h2 className="sidebar-heading">Addresses</h2>
-          <ul className="folders addresses">
-            {props.mailboxes.map((m) => (
-              <li key={m.address}>
-                <button className={m.address === props.mailbox ? "active" : ""} onClick={() => props.onMailbox(m.address)} title={m.address}>
-                  <span className="address">{m.address}</span>
-                  {m.unread > 0 && <span className="count">{m.unread}</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <h2 className="sidebar-heading">Addresses</h2>
+      <ul className="folders addresses">
+        {props.mailboxes.map((m) => (
+          <li key={m.address}>
+            <button
+              className={props.mailboxes.length > 1 && m.address === props.mailbox ? "active" : ""}
+              onClick={() => props.onMailbox(m.address)}
+              title={m.address}
+            >
+              <span className="address">{m.address}</span>
+              {props.mailboxes.length > 1 && m.unread > 0 && <span className="count">{m.unread}</span>}
+            </button>
+          </li>
+        ))}
+        <li>
+          <button className="new-address" onClick={props.onNewAddress} title="Add another address, like promos@">
+            <span className="plus">+</span>
+            <span>New address</span>
+          </button>
+        </li>
+      </ul>
       <div className="sidebar-footer">
         <button className="ghost" onClick={props.onSettings}>
           <Icon name="gear" /> Settings
         </button>
-        {props.mailboxes.length === 1 && <div className="muted small ellipsis">{props.mailbox}</div>}
       </div>
     </nav>
   );

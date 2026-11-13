@@ -12,6 +12,7 @@ export function AddressesSection({ mailboxes, cloudflare, onChanged }: { mailbox
   return (
     <section>
       <h3>Addresses</h3>
+      <p className="muted small">Each address gets its own inbox and can be picked as the sender when you write.</p>
       <ul className="address-list">
         {mailboxes.map((m) => (
           <li key={m.address}>

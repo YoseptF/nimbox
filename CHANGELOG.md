@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.5
+
+- Add more addresses, like promos@ or hello@, from **+ New address** in the sidebar. With Cloudflare connected, they receive mail right away.
+- Pick which address a new message is sent from.
+- Setup now says one address is enough to start.
+
 ## 0.4.4
 
 - Simple emails now take nimbox's own colors instead of a bright white box; designed emails keep their look inside a softer frame.
