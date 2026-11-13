@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.4
+
+- Simple emails now take nimbox's own colors instead of a bright white box; designed emails keep their look inside a softer frame.
+- Quoted history (from Gmail, Outlook, Apple Mail and plain-text replies) is hidden behind a "•••" button, without the grey highlight.
+- Replies you send mark their quoted part, so other mail apps can fold it away too.
+- Your own messages show your name's initials, or "me".
+- The subject and the conversation buttons sit together at the top, and messages line up with the left edge.
+
 ## 0.4.3
 
 - Connecting GitHub now says up front that it takes two pages, labels them "Step 1 of 2" and "Step 2 of 2", and opens or highlights the second page once you approve the first, since GitHub says "you're all set" too early.

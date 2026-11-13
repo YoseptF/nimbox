@@ -3,32 +3,46 @@ import { api } from "./api";
 import { Composer } from "./Composer";
 import { avatarHue, fileSize, formatPerson, initials, longDate, personLabel, quote, replySubject, shortDate } from "./format";
 import { Icon } from "./icons";
+import { isOwnPlainHtml, prepareHtml, type PreparedHtml } from "./mailBody";
+import { splitQuotedText, unquote } from "../shared/quote";
 import type { Body, Draft, MailboxInfo, Message, Person, Thread } from "./types";
 
 const REMOTE = /(<img[^>]+src\s*=\s*["']?\s*https?:|url\(\s*["']?\s*https?:|<link[^>]+href\s*=\s*["']?\s*https?:)/i;
 
-function frameDocument(html: string, allowRemote: boolean) {
+function themeColors() {
+  const css = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  return { text: get("--text", "#1d1d1f"), muted: get("--muted", "#6b7078"), accent: get("--accent", "#2f6fde"), border: get("--border", "#e2e4e8") };
+}
+
+function frameDocument(prepared: PreparedHtml, allowRemote: boolean, showQuotes: boolean) {
   const images = allowRemote ? "data: https: http:" : "data:";
   const styles = allowRemote ? "'unsafe-inline' https: http:" : "'unsafe-inline'";
   const csp = `default-src 'none'; img-src ${images}; style-src ${styles}; font-src data:${allowRemote ? " https:" : ""}; media-src data:`;
+  const theme = themeColors();
+  const base = prepared.designed
+    ? `:root{color-scheme:light}html,body{margin:0;padding:0;background:#fff;color:#1d1d1f}body{padding:16px}`
+    : `:root{color-scheme:light dark}html,body{margin:0;padding:0;background:transparent;color:${theme.text}}body{padding:2px 0}a{color:${theme.accent}}blockquote{margin:0 0 0 .5em;padding-left:.8em;border-left:2px solid ${theme.border};color:${theme.muted}}`;
+  const quotes = showQuotes ? "" : "[data-nb-quote]{display:none!important}";
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>
-html,body{margin:0;padding:0;background:#fff;color:#1d1d1f;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow-wrap:anywhere}
-body{padding:12px}img{max-width:100%;height:auto}blockquote{margin:0 0 0 .5em;padding-left:.8em;border-left:2px solid #ccc;color:#555}pre{white-space:pre-wrap}
-</style></head><body>${html}</body></html>`;
+body{font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow-wrap:anywhere}
+img{max-width:100%;height:auto}pre{white-space:pre-wrap}.gmail_attr{background:none!important;color:inherit!important;margin-bottom:4px}
+${base}${quotes}
+</style>${prepared.head}</head><body>${prepared.body}</body></html>`;
 }
 
-function HtmlFrame({ html, allowRemote }: { html: string; allowRemote: boolean }) {
+function HtmlFrame({ prepared, allowRemote, showQuotes }: { prepared: PreparedHtml; allowRemote: boolean; showQuotes: boolean }) {
   const ref = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(120);
-  const doc = useMemo(() => frameDocument(html, allowRemote), [html, allowRemote]);
+  const [height, setHeight] = useState(60);
+  const doc = useMemo(() => frameDocument(prepared, allowRemote, showQuotes), [prepared, allowRemote, showQuotes]);
 
   useEffect(() => {
     const frame = ref.current;
     if (!frame) return;
     let observer: ResizeObserver | undefined;
     const measure = () => {
-      const body = frame.contentDocument?.documentElement;
-      if (body) setHeight(Math.max(body.scrollHeight, 40));
+      const body = frame.contentDocument?.body;
+      if (body) setHeight(Math.max(Math.ceil(body.getBoundingClientRect().height), 24));
     };
     const onLoad = () => {
       measure();
@@ -45,19 +59,61 @@ function HtmlFrame({ html, allowRemote }: { html: string; allowRemote: boolean }
     };
   }, [doc]);
 
-  return (
+  const frame = (
     <iframe
       ref={ref}
-      className="html-frame"
+      className={`html-frame ${prepared.designed ? "designed" : "simple"}`}
       sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       srcDoc={doc}
       style={{ height }}
       title="Message"
     />
   );
+  return prepared.designed ? <div className="designed-frame">{frame}</div> : frame;
 }
 
-function Avatar({ person }: { person: Person }) {
+function QuoteToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button className="quote-toggle" onClick={onToggle} title={open ? "Hide quoted text" : "Show quoted text"} aria-expanded={open}>
+      •••
+    </button>
+  );
+}
+
+function MessageContent({ body, allowRemote }: { body: Body; allowRemote: boolean }) {
+  const [showQuotes, setShowQuotes] = useState(false);
+  const prepared = useMemo(() => (body.html && !isOwnPlainHtml(body.html) ? prepareHtml(body.html) : null), [body.html]);
+  if (prepared) {
+    return (
+      <>
+        <HtmlFrame prepared={prepared} allowRemote={allowRemote} showQuotes={showQuotes} />
+        {prepared.hasQuote && <QuoteToggle open={showQuotes} onToggle={() => setShowQuotes((v) => !v)} />}
+      </>
+    );
+  }
+  const split = splitQuotedText(body.text);
+  return (
+    <>
+      <div className="plain">{split.main}</div>
+      {split.quoted && (
+        <>
+          <QuoteToggle open={showQuotes} onToggle={() => setShowQuotes((v) => !v)} />
+          {showQuotes && (
+            <div className="plain quoted">
+              {split.attribution && <div className="attribution">{split.attribution}</div>}
+              <blockquote>{unquote(split.quoted)}</blockquote>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+function Avatar({ person, me }: { person: Person; me: MailboxInfo }) {
+  if (person.address === me.address) {
+    return <span className="avatar self">{me.displayName ? initials({ name: me.displayName, address: me.address }) : "me"}</span>;
+  }
   return (
     <span className="avatar" style={{ background: `hsl(${avatarHue(person.address)} 45% 45%)` }}>
       {initials(person)}
@@ -73,6 +129,7 @@ function recipients(message: Message, me: string) {
 function MessageItem(props: {
   message: Message;
   mailbox: string;
+  me: MailboxInfo;
   expanded: boolean;
   onToggle: () => void;
   onBody: (body: Body) => void;
@@ -100,7 +157,7 @@ function MessageItem(props: {
   if (!props.expanded) {
     return (
       <article className="message collapsed" onClick={props.onToggle}>
-        <Avatar person={message.from} />
+        <Avatar person={message.from} me={props.me} />
         <span className="from">{personLabel(message.from, mailbox)}</span>
         <span className="snippet">{message.snippet}</span>
         <time>{shortDate(message.date)}</time>
@@ -111,11 +168,11 @@ function MessageItem(props: {
   return (
     <article className="message">
       <header className="message-header" onClick={props.onToggle}>
-        <Avatar person={message.from} />
+        <Avatar person={message.from} me={props.me} />
         <div className="who">
           <div>
-            <strong>{message.from.name || message.from.address}</strong>
-            {message.from.name && <span className="muted"> &lt;{message.from.address}&gt;</span>}
+            <strong>{message.from.address === mailbox ? props.me.displayName || "me" : message.from.name || message.from.address}</strong>
+            {message.from.address !== mailbox && message.from.name && <span className="muted"> &lt;{message.from.address}&gt;</span>}
           </div>
           <button
             className="link muted small"
@@ -165,7 +222,7 @@ function MessageItem(props: {
             Remote images are blocked. <button className="link" onClick={() => setRemote(true)}>Show images</button>
           </div>
         )}
-        {body && (body.html ? <HtmlFrame html={body.html} allowRemote={remote} /> : <div className="plain">{body.text}</div>)}
+        {body && <MessageContent body={body} allowRemote={remote} />}
         {files.length > 0 && (
           <ul className="attachments">
             {files.map((file) => (
@@ -280,7 +337,7 @@ export function ThreadView(props: {
         <button className="icon-button back" onClick={props.onClose} title="Back">
           <Icon name="back" />
         </button>
-        <div className="spacer" />
+        <h1 className="thread-subject">{thread.subject || "(no subject)"}</h1>
         <button
           className="icon-button"
           title="Mark unread"
@@ -304,13 +361,13 @@ export function ThreadView(props: {
           <Icon name="trash" />
         </button>
       </header>
-      <h1 className="thread-subject">{thread.subject || "(no subject)"}</h1>
       <div className="messages">
         {messages.map((m) => (
           <MessageItem
             key={m.id}
             message={m}
             mailbox={me}
+            me={props.mailbox}
             expanded={expanded.has(m.id)}
             onToggle={() =>
               setExpanded((prev) => {
