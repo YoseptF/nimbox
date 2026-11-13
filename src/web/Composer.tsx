@@ -27,6 +27,7 @@ function readFile(file: File): Promise<PendingFile> {
 
 export function Composer(props: {
   mailbox: MailboxInfo;
+  mailboxes?: MailboxInfo[];
   initial: Draft;
   brevo: boolean;
   inline?: boolean;
@@ -34,6 +35,9 @@ export function Composer(props: {
   onSent: (sent: { id: string; threadId: string }) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(props.initial);
+  const [fromAddress, setFromAddress] = useState(props.mailbox.address);
+  const choices = !props.initial.replyTo && props.mailboxes && props.mailboxes.length > 1 ? props.mailboxes : null;
+  const sender = choices?.find((m) => m.address === fromAddress) ?? props.mailbox;
   const [showCc, setShowCc] = useState(Boolean(props.initial.cc || props.initial.bcc));
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [sending, setSending] = useState(false);
@@ -64,7 +68,7 @@ export function Composer(props: {
     setSending(true);
     setError(null);
     try {
-      const sent = await api.send(props.mailbox.address, {
+      const sent = await api.send(sender.address, {
         ...draft,
         attachments: files.map(({ filename, contentType, content }) => ({ filename, contentType, content })),
       });
@@ -105,7 +109,17 @@ export function Composer(props: {
       {!props.brevo && <div className="banner error">Sending is not set up yet. Open Settings → Setup checklist to connect Brevo.</div>}
       <div className="field">
         <label>From</label>
-        <span className="muted">{props.mailbox.displayName ? `${props.mailbox.displayName} <${props.mailbox.address}>` : props.mailbox.address}</span>
+        {choices ? (
+          <select className="from-select" value={fromAddress} onChange={(e) => setFromAddress(e.target.value)}>
+            {choices.map((m) => (
+              <option key={m.address} value={m.address}>
+                {m.displayName ? `${m.displayName} <${m.address}>` : m.address}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="muted">{props.mailbox.displayName ? `${props.mailbox.displayName} <${props.mailbox.address}>` : props.mailbox.address}</span>
+        )}
       </div>
       <div className="field">
         <label htmlFor="to">To</label>
