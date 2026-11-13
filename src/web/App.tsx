@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import { Composer } from "./Composer";
+import { NewAddressDialog } from "./NewAddress";
 import { ReturnNotice, takeCloudflareReturn } from "./CloudflareUI";
 import { githubReady } from "./GithubConnect";
 import { UpdateBanner } from "./UpdateBanner";
@@ -39,6 +40,7 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [github, setGithub] = useState<GithubState | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [newAddressOpen, setNewAddressOpen] = useState(false);
   const [cloudflare, setCloudflare] = useState<CloudflareState | null>(null);
   const [notice, setNotice] = useState(takeCloudflareReturn);
 
@@ -221,6 +223,7 @@ export function App() {
           onFolder={openFolder}
           onCompose={() => setDraft({ to: "", cc: "", bcc: "", subject: "", text: "" })}
           onSettings={() => setSettingsOpen(true)}
+          onNewAddress={() => setNewAddressOpen(true)}
           email={status.email}
         />
         <ThreadList
@@ -257,6 +260,7 @@ export function App() {
         {draft && current && (
           <Composer
             mailbox={current}
+            mailboxes={mailboxes}
             initial={draft}
             brevo={status.brevo}
             onClose={() => setDraft(null)}
@@ -264,6 +268,16 @@ export function App() {
               setDraft(null);
               onThreadChanged();
               if (folder !== "inbox") openThread(sent.threadId);
+            }}
+          />
+        )}
+        {newAddressOpen && (
+          <NewAddressDialog
+            mailboxes={mailboxes}
+            cloudflare={cloudflare}
+            onClose={() => setNewAddressOpen(false)}
+            onAdded={() => {
+              loadMailboxes();
             }}
           />
         )}

@@ -1273,3 +1273,48 @@ pre {
 .attention {
   animation: attention-pulse 1.4s ease-in-out infinite;
 }
+
+.new-address {
+  color: var(--muted);
+}
+
+.new-address:hover {
+  color: var(--text);
+}
+
+.folders .new-address .plus {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.small-dialog {
+  width: min(440px, 100%);
+}
+
+.address-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.address-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.from-select {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  outline: none;
+}
